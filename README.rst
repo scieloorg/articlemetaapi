@@ -1,10 +1,10 @@
-scieloh5m5
-----------
+ArticleMeta API Client
+----------------------
 
-Biblioteca para fornecer indicadores h5m5 do Google Scholar dos periódicos SciELO.
+Biblioteca para fornecer metodos para iterar em endpoints da API ArticleMeta.
 
 Build Status
 ------------
 
-.. image:: https://travis-ci.org/scieloorg/scieloh5m5.svg?branch=master
-    :target: https://travis-ci.org/scieloorg/scieloh5m5
+.. image:: https://travis-ci.org/scieloorg/articlemetaapi.svg?branch=master
+    :target: https://travis-ci.org/scieloorg/articlemetaapi
