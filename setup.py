@@ -11,7 +11,7 @@ tests_require = []
 
 setup(
     name="articlemetapi",
-    version="0.1.0",
+    version="1.15.3",
     description="Library that implements the endpoints of the ArticleMeta API",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",

@@ -20,7 +20,15 @@ logger = logging.getLogger(__name__)
 EVENTS_STRUCT = namedtuple('event', 'code collection event date')
 
 
-class UnauthorizedAccess(Exception):
+class ArticleMetaExceptions(Exception):
+    pass
+
+
+class UnauthorizedAccess(ArticleMetaExceptions):
+    pass
+
+
+class ServerError(ArticleMetaExceptions):
     pass
 
 
@@ -52,12 +60,10 @@ class RestfulClient(object):
     COLLECTION_ENDPOINT = '/api/v1/collection'
     ATTEMPTS = 10
 
-    def __init__(self, domain=None, admintoken=None):
+    def __init__(self, domain=None):
 
         if domain:
             self.ARTICLEMETA_URL = domain
-
-        self.admintoken = admintoken
 
     def _do_request(self, url, params=None, content=None, timeout=3, method='GET'):
 
@@ -183,6 +189,21 @@ class RestfulClient(object):
                         yield (EVENTS_STRUCT(**identifier), journal)
 
                 params['offset'] += LIMIT
+
+    def exists_journal(self, code, collection):
+        url = urljoin(self.ARTICLEMETA_URL, self.JOURNAL_ENDPOINT + '/exists')
+
+        params = {
+            'collection': collection,
+            'code': code
+        }
+
+        result = self._do_request(url, params=params).json()
+
+        if result is True:
+            return True
+
+        return False
 
     def exists_issue(self, code, collection):
         url = urljoin(self.ARTICLEMETA_URL, self.ISSUE_ENDPOINT + '/exists')
@@ -446,47 +467,16 @@ class RestfulClient(object):
 
         return result
 
-    def delete_journal(self, collection, code):
-        url = urljoin(self.ARTICLEMETA_URL, self.JOURNAL_ENDPOINT + '/delete')
-
-        params = {
-            'issn': code,
-            'collection': collection
-        }
-
-        return self._do_request(url, params=params, method='DELETE')
-
-    def delete_issue(self, collection, code):
-        url = urljoin(self.ARTICLEMETA_URL, self.ISSUE_ENDPOINT + '/delete')
-
-        params = {
-            'code': code,
-            'collection': collection
-        }
-
-        return self._do_request(url, params=params, method='DELETE')
-
-    def delete_document(self, collection, code):
-        url = urljoin(self.ARTICLEMETA_URL, self.DOCUMENT_ENDPOINT + '/delete')
-
-        params = {
-            'code': code,
-            'collection': collection
-        }
-
-        return self._do_request(url, params=params, method='DELETE')
-
 
 class ThirftClient(object):
-    ARTICLEMETA_THRIFT_URL = 'articlemeta.scielo.org:11620'
     ARTICLEMETA_THRIFT = thriftpy.load(
         os.path.join(os.path.dirname(__file__))+'/thrift/articlemeta.thrift')
 
-    def __init__(self, domain=None, admintoken=None):
+    def __init__(self, domain=None):
         """
         Cliente thrift para o Articlemeta.
         """
-        self.domain = domain or ARTICLEMETA_THRIFT_URL
+        self.domain = domain or '127.0.0.1:11620'
         self._set_address()
 
     def _set_address(self):
@@ -509,28 +499,77 @@ class ThirftClient(object):
         )
         return client
 
-    def journal(self, collection, code):
+    def add_journal(self, data):
+        """
+        This method include new journals to the ArticleMeta.
+
+        data: legacy SciELO Documents JSON Type 3.
+        """
+
+        try:
+            journal = self.client.add_journal(data)
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            raise ServerError(e.message)
+        except self.ARTICLEMETA_THRIFT.ValueError as e:
+            raise ValueError(e.message)
+
+        return json.loads(journal)
+
+    def add_issue(self, data):
+        """
+        This method include new issues to the ArticleMeta.
+
+        data: legacy SciELO Documents JSON Type 3.
+        """
+
+        try:
+            issue = self.client.add_issue(data)
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            raise ServerError(e.message)
+        except self.ARTICLEMETA_THRIFT.ValueError as e:
+            raise ValueError(e.message)
+
+        return json.loads(issue)
+
+    def add_document(self, data):
+        """
+        This method include new issues to the ArticleMeta.
+
+        data: legacy SciELO Documents JSON Type 3.
+        """
+
+        try:
+            document = self.client.add_article(data)
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            raise ServerError(e.message)
+        except self.ARTICLEMETA_THRIFT.ValueError as e:
+            raise ValueError(e.message)
+
+        return json.loads(document)
+
+    def journal(self, code, collection):
 
         try:
             journal = self.client.get_journal(
                 code=code,
                 collection=collection
             )
-        except:
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error retrieving journal: %s_%s' % (collection, code)
             raise ServerError(msg)
 
         jjournal = None
+
         try:
             jjournal = json.loads(journal)
         except:
             msg = 'Fail to load JSON when retrienving journal: %s_%s' % (
                 collection, code
             )
-            raise ServerError(msg)
+            raise ValueError(msg)
 
         if not jjournal:
-            logger.warning('Journal not found for : %s_%s' % (collection, code))
+            logger.warning('Journal not found for: %s_%s' % (collection, code))
             return None
 
         xjournal = Journal(jjournal)
@@ -542,17 +581,21 @@ class ThirftClient(object):
         offset = 0
 
         while True:
-            identifiers = self.client.get_journal_identifiers(
-                collection=collection, issn=issn, limit=LIMIT, offset=offset
-            )
+            try:
+                identifiers = self.client.get_journal_identifiers(
+                    collection=collection, issn=issn, limit=LIMIT, offset=offset
+                )
+            except self.ARTICLEMETA_THRIFT.ServerError as e:
+                msg = 'Error retrieving list of journal identifiers: %s_%s' % (collection, issn)
+                raise ServerError(msg)
 
             if len(identifiers) == 0:
                 raise StopIteration
 
             for identifier in identifiers:
                 journal = self.journal(
-                    code=identifier.code[0],
-                    collection=identifier.collection
+                    identifier.code[0],
+                    identifier.collection
                 )
 
                 yield journal
@@ -567,11 +610,15 @@ class ThirftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                identifiers = self.client.journal_history_changes(
-                    collection=collection, event=event, code=code,
-                    from_date=from_date, until_date=until_date, limit=LIMIT,
-                    offset=offset
-                )
+                try:
+                    identifiers = self.client.journal_history_changes(
+                        collection=collection, event=event, code=code,
+                        from_date=from_date, until_date=until_date, limit=LIMIT,
+                        offset=offset
+                    )
+                except self.ARTICLEMETA_THRIFT.ServerError as e:
+                    msg = 'Error retrieving list of journal history: %s_%s' % (collection, code)
+                    raise ServerError(msg)
 
                 if len(identifiers) == 0:
                     break
@@ -582,8 +629,8 @@ class ThirftClient(object):
                         yield (identifier.event, identifier, None)
 
                     journal = self.journal(
-                        code=identifier.code[0],
-                        collection=identifier.collection
+                        identifier.code[0],
+                        identifier.collection
                     )
 
                     if journal and journal.data:
@@ -591,23 +638,33 @@ class ThirftClient(object):
 
                     offset += LIMIT
 
+    def exists_journal(self, code, collection):
+        try:
+            return self.client.exists_journal(
+                code,
+                collection
+            )
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            msg = 'Error checking if journal exists: %s_%s' % (collection, code)
+            raise ServerError(msg)
+
     def exists_issue(self, code, collection):
         try:
             return self.client.exists_issue(
                 code,
                 collection
             )
-        except:
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error checking if issue exists: %s_%s' % (collection, code)
             raise ServerError(msg)
 
-    def exists_article(self, code, collection):
+    def exists_document(self, code, collection):
         try:
             return self.client.exists_article(
                 code,
                 collection
             )
-        except:
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error checking if document exists: %s_%s' % (collection, code)
             raise ServerError(msg)
 
@@ -618,7 +675,7 @@ class ThirftClient(object):
                 collection,
                 aid
             )
-        except:
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error senting aid for document: %s_%s' % (collection, code)
             raise ServerError(msg)
 
@@ -640,7 +697,7 @@ class ThirftClient(object):
                 collection=collection,
                 replace_journal_metadata=True
             )
-        except:
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error retrieving issue: %s_%s' % (collection, code)
             raise ServerError(msg)
 
@@ -649,10 +706,10 @@ class ThirftClient(object):
             jissue = json.loads(issue)
         except:
             msg = 'Fail to load JSON when retrienving document: %s_%s' % (collection, code)
-            raise ServerError(msg)
+            raise ValueError(msg)
 
         if not jissue:
-            logger.warning('Issue not found for : %s_%s' % (collection, code))
+            logger.warning('Issue not found for: %s_%s' % (collection, code))
             return None
 
         xissue = Issue(jissue)
@@ -669,10 +726,14 @@ class ThirftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                identifiers = self.client.get_issue_identifiers(
-                    collection=collection, issn=issn, from_date=from_date,
-                    until_date=until_date, limit=LIMIT, offset=offset,
-                    extra_filter=extra_filter)
+                try:
+                    identifiers = self.client.get_issue_identifiers(
+                        collection=collection, issn=issn, from_date=from_date,
+                        until_date=until_date, limit=LIMIT, offset=offset,
+                        extra_filter=extra_filter)
+                except self.ARTICLEMETA_THRIFT.ServerError as e:
+                    msg = 'Error retrieving list of issue identifiers: %s_%s' % (collection, issn)
+                    raise ServerError(msg)
 
                 if len(identifiers) == 0:
                     break
@@ -680,8 +741,8 @@ class ThirftClient(object):
                 for identifier in identifiers:
 
                     issue = self.issue(
-                        code=identifier.code,
-                        collection=identifier.collection,
+                        identifier.code,
+                        identifier.collection,
                         replace_journal_metadata=True
                     )
 
@@ -698,11 +759,15 @@ class ThirftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                identifiers = self.client.issue_history_changes(
-                    collection=collection, event=event, code=code,
-                    from_date=from_date, until_date=until_date, limit=LIMIT,
-                    offset=offset
-                )
+                try:
+                    identifiers = self.client.issue_history_changes(
+                        collection=collection, event=event, code=code,
+                        from_date=from_date, until_date=until_date, limit=LIMIT,
+                        offset=offset
+                    )
+                except self.ARTICLEMETA_THRIFT.ServerError as e:
+                    msg = 'Error retrieving list of issue history: %s_%s' % (collection, code)
+                    raise ServerError(msg)
 
                 if len(identifiers) == 0:
                     break
@@ -714,8 +779,8 @@ class ThirftClient(object):
                         continue
 
                     issue = self.issue(
-                        code=identifier.code,
-                        collection=identifier.collection,
+                        identifier.code,
+                        identifier.collection,
                         replace_journal_metadata=True
                     )
 
@@ -732,7 +797,7 @@ class ThirftClient(object):
                 replace_journal_metadata=True,
                 fmt=fmt
             )
-        except:
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error retrieving document: %s_%s' % (collection, code)
             raise ServerError(msg)
 
@@ -742,10 +807,10 @@ class ThirftClient(object):
                 jarticle = json.loads(article)
             except:
                 msg = 'Fail to load JSON when retrienving document: %s_%s' % (collection, code)
-                raise ServerError(msg)
+                raise ValueError(msg)
 
             if not jarticle:
-                logger.warning('Document not found for : %s_%s' % (collection, code))
+                logger.warning('Document not found for: %s_%s' % (collection, code))
                 return None
 
             xarticle = Article(jarticle)
@@ -765,10 +830,14 @@ class ThirftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                identifiers = self.client.get_article_identifiers(
-                    collection=collection, issn=issn, from_date=from_date,
-                    until_date=until_date, limit=LIMIT, offset=offset,
-                    extra_filter=extra_filter)
+                try:
+                    identifiers = self.client.get_article_identifiers(
+                        collection=collection, issn=issn, from_date=from_date,
+                        until_date=until_date, limit=LIMIT, offset=offset,
+                        extra_filter=extra_filter)
+                except self.ARTICLEMETA_THRIFT.ServerError as e:
+                    msg = 'Error retrieving list of article identifiers: %s_%s' % (collection, issn)
+                    raise ServerError(msg)
 
                 if len(identifiers) == 0:
                     break
@@ -776,8 +845,8 @@ class ThirftClient(object):
                 for identifier in identifiers:
 
                     document = self.document(
-                        code=identifier.code,
-                        collection=identifier.collection,
+                        identifier.code,
+                        identifier.collection,
                         replace_journal_metadata=True,
                         fmt=fmt
                     )
@@ -795,11 +864,15 @@ class ThirftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                identifiers = self.client.article_history_changes(
-                    collection=collection, event=event, code=code,
-                    from_date=from_date, until_date=until_date, limit=LIMIT,
-                    offset=offset
-                )
+                try:
+                    identifiers = self.client.article_history_changes(
+                        collection=collection, event=event, code=code,
+                        from_date=from_date, until_date=until_date, limit=LIMIT,
+                        offset=offset
+                    )
+                except self.ARTICLEMETA_THRIFT.ServerError as e:
+                    msg = 'Error retrieving list of article history: %s_%s' % (collection, code)
+                    raise ServerError(msg)
 
                 if len(identifiers) == 0:
                     break
@@ -810,8 +883,8 @@ class ThirftClient(object):
                         yield (identifier, None)
 
                     document = self.document(
-                        code=identifier.code,
-                        collection=identifier.collection,
+                        identifier.code,
+                        identifier.collection,
                         replace_journal_metadata=True,
                         fmt=fmt
                     )
@@ -825,20 +898,54 @@ class ThirftClient(object):
         """
         Retrieve the collection ids according to the given 3 letters acronym
         """
-        return self.client.get_collection(code=collection)
+        result = None
+        try:
+            result = self.client.get_collection(code=collection)
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            msg = 'Error retrieving collection: %s_%s' % (collection)
+            raise ServerError(msg)
+
+        return result
 
     def collections(self):
 
-        return [i for i in self.client.get_collection_identifiers()]
+        try:
+            result = self.client.get_collection_identifiers()
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            msg = 'Error retrieving collection: %s_%s' % (collection)
+            raise ServerError(msg)
 
-    def delete_journal(self, collection, code):
+        return [i for i in result]
 
-        return json.loads(self.client.delete_journal(code, collection))
+    def delete_journal(self, code, collection):
 
-    def delete_issue(self, collection, code):
+        result = None
+        try:
+            result = self.client.delete_journal(code, collection)
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            msg = 'Error removing journal: %s_%s' % (collection, code)
+            raise ServerError(msg)
 
-        return json.loads(self.client.delete_issue(code, collection))
+        return json.loads(result)
 
-    def delete_document(self, collection, code):
+    def delete_issue(self, code, collection):
 
-        return json.loads(self.client.delete_article(code, collection))
+        result = None
+        try:
+            result = self.client.delete_issue(code, collection)
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            msg = 'Error removing issue: %s_%s' % (collection, code)
+            raise ServerError(msg)
+
+        return json.loads(result)
+
+    def delete_document(self, code, collection):
+
+        result = None
+        try:
+            result = self.client.delete_article(code, collection)
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
+            msg = 'Error removing document: %s_%s' % (collection, code)
+            raise ServerError(msg)
+
+        return json.loads(result)
