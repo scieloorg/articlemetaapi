@@ -72,9 +72,9 @@ service ArticleMeta {
     bool set_aid(1: string code, 2: string collection, 3: string aid) throws (1: ValueError value_err, 2:ServerError server_err),
     bool exists_article(1: string code, 2: string collection) throws (1: ValueError value_err, 2:ServerError server_err),
     bool exists_issue(1: string code, 2: string collection) throws (1: ValueError value_err, 2:ServerError server_err),
-    bool delete_journal(1: string code, 2: string collection) throws (1:ServerError server_err),
-    bool delete_issue(1: string code, 2: string collection) throws (1:ServerError server_err),
-    bool delete_document(1: string code, 2: string collection) throws (1:ServerError server_err),
+    string delete_journal(1: string code, 2: string collection) throws (1:ServerError server_err),
+    string delete_issue(1: string code, 2: string collection) throws (1:ServerError server_err),
+    string delete_article(1: string code, 2: string collection) throws (1:ServerError server_err),
     string add_or_update_journal(1: string metadata) throws (1: ValueError value_err, 2:ServerError server_err),
     string add_or_update_issue(1: string metadata) throws (1: ValueError value_err, 2:ServerError server_err),
     string add_or_update_article(1: string metadata) throws (1: ValueError value_err, 2:ServerError server_err)

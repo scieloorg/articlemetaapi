@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 EVENTS_STRUCT = namedtuple('event', 'code collection event date')
 
 
+class UnauthorizedAccess(Exception):
+    pass
+
+
 def dates_pagination(from_date, until_date):
     td = timedelta(days=TIME_DELTA)
     td_plus = timedelta(days=TIME_DELTA+1)
@@ -45,29 +49,42 @@ class RestfulClient(object):
     JOURNAL_ENDPOINT = '/api/v1/journal'
     ARTICLE_ENDPOINT = '/api/v1/article'
     ISSUE_ENDPOINT = '/api/v1/issue'
+    COLLECTION_ENDPOINT = '/api/v1/collection'
     ATTEMPTS = 10
 
-    def __init__(self, admin_key=None):
-        self.admin_key = admin_key
+    def __init__(self, domain=None, admintoken=None):
 
-    def _do_request(self, url, params, content=None, timeout=3, method='GET'):
+        if domain:
+            self.ARTICLEMETA_URL = domain
+
+        self.admintoken = admintoken
+
+    def _do_request(self, url, params=None, content=None, timeout=3, method='GET'):
 
         request = requests.get
         params = params if params else {}
-        params['admin'] = self.admin_key
+        params['admintoken'] = self.admintoken
 
         if method == 'POST':
             request = requests.post
+        if method == 'DELETE':
+            request = requests.delete
 
         result = None
         for attempt in range(self.ATTEMPTS):
             try:
                 result = request(url, params=params, timeout=timeout)
+                if result.status_code == 401:
+                    logger.error('Unautorized Access for (%s)' % url)
+                    logger.exception(UnauthorizedAccess())
                 break
-            except Exception as e:
+            except requests.RequestException as e:
                 logger.error('fail retrieving data from (%s) attempt(%d/%d)' % (url, attempt+1, self.ATTEMPTS))
                 logger.exception(e)
                 continue
+
+        if not result:
+            return
 
         try:
             return result.json()
@@ -85,6 +102,9 @@ class RestfulClient(object):
 
         result = self._do_request(url, params)
 
+        if not result:
+            return None
+
         if len(result) != 1:
             return None
 
@@ -93,17 +113,18 @@ class RestfulClient(object):
         return xresult
 
     def journals(self, collection=None, issn=None):
-        params = {}
+        params = {
+            'limit': LIMIT
+        }
 
         if collection:
             params['collection'] = collection
         if issn:
             params['code'] = issn
 
+        params['offset'] = 0
         while True:
             url = urljoin(self.ARTICLEMETA_URL, self.JOURNAL_ENDPOINT + '/identifiers')
-            params['offset'] = offset
-            params['limit'] = LIMIT
             identifiers = self._do_request(url, params=params).get('objects', [])
 
             if len(identifiers) == 0:
@@ -122,7 +143,9 @@ class RestfulClient(object):
     def journals_history(self, collection=None, event=None, code=None,
                          from_date=None, until_date=None):
 
-        params = {}
+        params = {
+            'limit': LIMIT
+        }
 
         if collection:
             params['collection'] = collection
@@ -139,10 +162,8 @@ class RestfulClient(object):
                 params['from_date'] = from_date
             if until_date:
                 params['until_date'] = until_date
-
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.JOURNAL_ENDPOINT + '/history')
-                params['limit'] = LIMIT
                 identifiers = self._do_request(url, params=params).get('objects', [])
 
                 if len(identifiers) == 0:
@@ -214,7 +235,9 @@ class RestfulClient(object):
     def issues(self, collection=None, issn=None, from_date=None,
                until_date=None):
 
-        params = {}
+        params = {
+            'limit': LIMIT
+        }
 
         if collection:
             params['collection'] = collection
@@ -225,10 +248,13 @@ class RestfulClient(object):
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
         for from_date, until_date in dates_pagination(fdate, udate):
-            params['offset'] = 0
+            params = {
+                'from': from_date,
+                'until': until_date,
+                'offset': 0
+            }
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ISSUE_ENDPOINT + '/identifiers')
-                params['limit'] = LIMIT
                 identifiers = self._do_request(url, params=params).get('objects', [])
 
                 if len(identifiers) == 0:
@@ -239,6 +265,7 @@ class RestfulClient(object):
                         code=identifier['code'],
                         collection=identifier['collection']
                     )
+
                     yield issue
 
                 params['offset'] += LIMIT
@@ -246,7 +273,9 @@ class RestfulClient(object):
     def issues_history(self, collection=None, issn=None, from_date=None,
                until_date=None):
 
-        params = {}
+        params = {
+            'limit': LIMIT
+        }
 
         if collection:
             params['collection'] = collection
@@ -257,10 +286,13 @@ class RestfulClient(object):
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
         for from_date, until_date in dates_pagination(fdate, udate):
-            params['offset'] = 0
+            params = {
+                'from': from_date,
+                'until': until_date,
+                'offset': 0
+            }
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ISSUE_ENDPOINT + '/history')
-                params['limit'] = LIMIT
                 identifiers = self._do_request(url, params=params).get('objects', [])
 
                 if len(identifiers) == 0:
@@ -305,7 +337,9 @@ class RestfulClient(object):
     def documents(self, collection=None, issn=None, from_date=None,
                   until_date=None, fmt='xylose'):
 
-        params = {}
+        params = {
+            'limit': LIMIT
+        }
 
         if collection:
             params['collection'] = collection
@@ -316,10 +350,13 @@ class RestfulClient(object):
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
         for from_date, until_date in dates_pagination(fdate, udate):
-            params['offset'] = 0
+            params = {
+                'from': from_date,
+                'until': until_date,
+                'offset': 0
+            }
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ARTICLE_ENDPOINT + '/identifiers')
-                params['limit'] = LIMIT
                 identifiers = self._do_request(url, params=params).get('objects', [])
 
                 if len(identifiers) == 0:
@@ -338,7 +375,9 @@ class RestfulClient(object):
     def documents_history(self, collection=None, issn=None, from_date=None,
                           until_date=None, fmt='xylose'):
 
-        params = {}
+        params = {
+            'limit': LIMIT
+        }
 
         if collection:
             params['collection'] = collection
@@ -349,10 +388,13 @@ class RestfulClient(object):
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
         for from_date, until_date in dates_pagination(fdate, udate):
-            params['offset'] = 0
+            params = {
+                'from': from_date,
+                'until': until_date,
+                'offset': 0
+            }
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ARTICLE_ENDPOINT + '/history')
-                params['limit'] = LIMIT
                 identifiers = self._do_request(url, params=params).get('objects', [])
 
                 if len(identifiers) == 0:
@@ -378,18 +420,84 @@ class RestfulClient(object):
 
                 params['offset'] += LIMIT
 
+    def collection(self, code):
+        """
+        Retrieve the collection ids according to the given 3 letters acronym
+        """
+        url = urljoin(self.ARTICLEMETA_URL, self.COLLECTION_ENDPOINT)
+
+        params = {'code': code}
+
+        result = self._do_request(url, params=params)
+
+        if not result:
+            return None
+
+        return result
+
+    def collections(self):
+
+        url = urljoin(self.ARTICLEMETA_URL, self.COLLECTION_ENDPOINT + '/identifiers')
+
+        result = self._do_request(url)
+
+        if not result:
+            return []
+
+        return result
+
+    def delete_journal(self, collection, code):
+        url = urljoin(self.ARTICLEMETA_URL, self.JOURNAL_ENDPOINT + '/delete')
+
+        params = {
+            'issn': code,
+            'collection': collection
+        }
+
+        return self._do_request(url, params=params, method='DELETE')
+
+    def delete_issue(self, collection, code):
+        url = urljoin(self.ARTICLEMETA_URL, self.ISSUE_ENDPOINT + '/delete')
+
+        params = {
+            'code': code,
+            'collection': collection
+        }
+
+        return self._do_request(url, params=params, method='DELETE')
+
+    def delete_document(self, collection, code):
+        url = urljoin(self.ARTICLEMETA_URL, self.DOCUMENT_ENDPOINT + '/delete')
+
+        params = {
+            'code': code,
+            'collection': collection
+        }
+
+        return self._do_request(url, params=params, method='DELETE')
+
 
 class ThirftClient(object):
-
+    ARTICLEMETA_THRIFT_URL = 'articlemeta.scielo.org:11620'
     ARTICLEMETA_THRIFT = thriftpy.load(
         os.path.join(os.path.dirname(__file__))+'/thrift/articlemeta.thrift')
 
-    def __init__(self, address, port):
+    def __init__(self, domain=None, admintoken=None):
         """
         Cliente thrift para o Articlemeta.
         """
-        self._address = address
-        self._port = port
+        self.domain = domain or ARTICLEMETA_THRIFT_URL
+        self._set_address()
+
+    def _set_address(self):
+
+        address = self.domain.split(':')
+
+        self._address = address[0]
+        try:
+            self._port = address[1]
+        except:
+            self._port = '11620'
 
     @property
     def client(self):
@@ -401,11 +509,11 @@ class ThirftClient(object):
         )
         return client
 
-    def journal(self, collection, issn):
+    def journal(self, collection, code):
 
         try:
             journal = self.client.get_journal(
-                code=issn,
+                code=code,
                 collection=collection
             )
         except:
@@ -417,16 +525,16 @@ class ThirftClient(object):
             jjournal = json.loads(journal)
         except:
             msg = 'Fail to load JSON when retrienving journal: %s_%s' % (
-                collection, issn
+                collection, code
             )
             raise ServerError(msg)
 
         if not jjournal:
-            logger.warning('Journal not found for : %s_%s' % (collection, issn))
+            logger.warning('Journal not found for : %s_%s' % (collection, code))
             return None
 
         xjournal = Journal(jjournal)
-        logger.info('Journal loaded: %s_%s' % (collection, issn))
+        logger.info('Journal loaded: %s_%s' % (collection, code))
 
         return xjournal
 
@@ -443,7 +551,7 @@ class ThirftClient(object):
 
             for identifier in identifiers:
                 journal = self.journal(
-                    issn=identifier.code[0],
+                    code=identifier.code[0],
                     collection=identifier.collection
                 )
 
@@ -474,7 +582,7 @@ class ThirftClient(object):
                         yield (identifier.event, identifier, None)
 
                     journal = self.journal(
-                        issn=identifier.code[0],
+                        code=identifier.code[0],
                         collection=identifier.collection
                     )
 
@@ -653,6 +761,7 @@ class ThirftClient(object):
 
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
+
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
@@ -721,3 +830,15 @@ class ThirftClient(object):
     def collections(self):
 
         return [i for i in self.client.get_collection_identifiers()]
+
+    def delete_journal(self, collection, code):
+
+        return json.loads(self.client.delete_journal(code, collection))
+
+    def delete_issue(self, collection, code):
+
+        return json.loads(self.client.delete_issue(code, collection))
+
+    def delete_document(self, collection, code):
+
+        return json.loads(self.client.delete_article(code, collection))
