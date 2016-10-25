@@ -1,0 +1,555 @@
+{
+    "title": {
+        "v699": [
+            {
+                "_": "continuous"
+            }
+        ],
+        "v340": [
+            {
+                "_": "B"
+            }
+        ],
+        "v941": [
+            {
+                "_": "20160719"
+            }
+        ],
+        "v901": [
+            {
+                "_": "Publicar resultados de investigaciones científicas originales, vinculadas o no al programa, que aborden la temática referente a caracterización, conservación y uso sustentable de la biodiversidad en la región Neotropical.",
+                "l": "es"
+            },
+            {
+                "_": "Publicar resultados de pesquisa original que abordem a temática, caracterização, conservação e uso sustentável da biodiversidade na região Neotropical.",
+                "l": "pt"
+            },
+            {
+                "_": "To disseminate the results of original research work, associated or not to the program, concerned with characterization, conservation and sustainable use of biodiversity within the Neotropical region.",
+                "l": "en"
+            }
+        ],
+        "v69": [
+            {
+                "_": "http://www.biotaneotropica.org.br/"
+            }
+        ],
+        "v930": [
+            {
+                "_": "BN"
+            }
+        ],
+        "v691": [
+            {
+                "_": "100000000000000000000000"
+            }
+        ],
+        "v350": [
+            {
+                "_": "es"
+            },
+            {
+                "_": "en"
+            },
+            {
+                "_": "pt"
+            }
+        ],
+        "v692": [
+            {
+                "_": "http://mc04.manuscriptcentral.com/bn-scielo"
+            }
+        ],
+        "v63": [
+            {
+                "_": "Departamento de Biologia Vegetal - Instituto de Biologia"
+            },
+            {
+                "_": "UNICAMP  CP 6109"
+            },
+            {
+                "_": "13083-970 - Campinas/SP"
+            },
+            {
+                "_": "Tel.:  (+55 19) 3521-6166"
+            },
+            {
+                "_": "Fax:  (+55 19) 3521-6168"
+            }
+        ],
+        "v480": [
+            {
+                "_": "Instituto Virtual da Biodiversidade | BIOTA - FAPESP"
+            }
+        ],
+        "v35": [
+            {
+                "_": "ONLIN"
+            }
+        ],
+        "v400": [
+            {
+                "_": "1676-0603"
+            }
+        ],
+        "issns": [
+            "1676-0611",
+            "1676-0603"
+        ],
+        "v301": [
+            {
+                "_": "2001"
+            }
+        ],
+        "v64": [
+            {
+                "_": "contato@biotaneotropica.org.br"
+            }
+        ],
+        "v140": [
+            {
+                "_": "FAPESP e CNPq"
+            }
+        ],
+        "v100": [
+            {
+                "_": "Biota Neotropica"
+            }
+        ],
+        "v85": [
+            {
+                "_": "nd"
+            }
+        ],
+        "code": "1676-0603",
+        "collection": "scl",
+        "v50": [
+            {
+                "_": "C"
+            }
+        ],
+        "v951": [
+            {
+                "_": "EMS"
+            }
+        ],
+        "v440": [
+            {
+                "_": "ECOLOGIA, CONSERVAÇÃO DA NATUREZA, BOTÂNICA, ZOOLOGIA"
+            }
+        ],
+        "v51": [
+            {
+                "b": "C",
+                "a": "20060413",
+                "_": ""
+            }
+        ],
+        "v435": [
+            {
+                "t": "ONLIN",
+                "_": "1676-0611"
+            }
+        ],
+        "v950": [
+            {
+                "_": "EMS"
+            }
+        ],
+        "v441": [
+            {
+                "_": "Biological Sciences"
+            }
+        ],
+        "v360": [
+            {
+                "_": "es"
+            },
+            {
+                "_": "en"
+            },
+            {
+                "_": "pt"
+            }
+        ],
+        "v5": [
+            {
+                "_": "S"
+            }
+        ],
+        "v935": [
+            {
+                "_": "1676-0611"
+            }
+        ],
+        "v65": [
+            {
+                "_": "<hr>"
+            }
+        ],
+        "v67": [
+            {
+                "_": "na"
+            }
+        ],
+        "v940": [
+            {
+                "_": "20060413"
+            }
+        ],
+        "v62": [
+            {
+                "_": "Programa BIOTA/FAPESP"
+            }
+        ],
+        "v310": [
+            {
+                "_": "BR"
+            }
+        ],
+        "scimago_id": "11700154374",
+        "v490": [
+            {
+                "_": "Campinas"
+            }
+        ],
+        "v320": [
+            {
+                "_": "SP"
+            }
+        ],
+        "v943": [
+            {
+                "_": "20161021"
+            }
+        ],
+        "v854": [
+            {
+                "_": "BIODIVERSITY CONSERVATION"
+            }
+        ],
+        "v690": [
+            {
+                "_": "www.scielo.br"
+            }
+        ],
+        "v66": [
+            {
+                "_": "art"
+            }
+        ],
+        "v150": [
+            {
+                "_": "Biota Neotrop."
+            }
+        ],
+        "v117": [
+            {
+                "_": "other"
+            }
+        ],
+        "v151": [
+            {
+                "_": "Biota neotrop"
+            }
+        ],
+        "v992": [
+            {
+                "_": "scl"
+            }
+        ],
+        "v942": [
+            {
+                "_": "20060413"
+            }
+        ],
+        "v20": [
+            {
+                "_": "097502-8"
+            }
+        ],
+        "v330": [
+            {
+                "_": "CT"
+            }
+        ],
+        "v851": [
+            {
+                "_": "SCIE"
+            }
+        ],
+        "v541": [
+            {
+                "_": "BY"
+            }
+        ],
+        "v10": [
+            {
+                "_": "br1.1"
+            }
+        ],
+        "v68": [
+            {
+                "_": "bn"
+            }
+        ],
+        "v450": [
+            {
+                "_": "LILACS"
+            }
+        ],
+        "v6": [
+            {
+                "_": "c"
+            }
+        ],
+        "v380": [
+            {
+                "_": "Z"
+            }
+        ]
+    },
+    "issue": {
+        "v48": [
+            {
+                "h": "Sumario",
+                "_": "",
+                "l": "es"
+            },
+            {
+                "h": "Sumário",
+                "_": "",
+                "l": "pt"
+            },
+            {
+                "h": "Table of Contents",
+                "_": "",
+                "l": "en"
+            }
+        ],
+        "v42": [
+            {
+                "_": "1"
+            }
+        ],
+        "v706": [
+            {
+                "_": "i"
+            }
+        ],
+        "v930": [
+            {
+                "_": "BN"
+            }
+        ],
+        "v91": [
+            {
+                "_": "20061011"
+            }
+        ],
+        "v36": [
+            {
+                "_": "20061"
+            }
+        ],
+        "v700": [
+            {
+                "_": "0"
+            }
+        ],
+        "v49": [
+            {
+                "t": "Artigos",
+                "l": "pt",
+                "_": "",
+                "c": "BN110"
+            },
+            {
+                "t": "Chaves de Identificação",
+                "l": "pt",
+                "_": "",
+                "c": "BN130"
+            },
+            {
+                "t": "Dissertações e Teses",
+                "l": "pt",
+                "_": "",
+                "c": "BN150"
+            },
+            {
+                "t": "Editorial",
+                "l": "pt",
+                "_": "",
+                "c": "BN090"
+            },
+            {
+                "t": "Inventários",
+                "l": "pt",
+                "_": "",
+                "c": "BN120"
+            },
+            {
+                "t": "Pontos de Vista",
+                "l": "pt",
+                "_": "",
+                "c": "BN100"
+            },
+            {
+                "t": "Articles",
+                "l": "en",
+                "_": "",
+                "c": "BN110"
+            },
+            {
+                "t": "Identification Keys",
+                "l": "en",
+                "_": "",
+                "c": "BN130"
+            },
+            {
+                "t": "Thesis",
+                "l": "en",
+                "_": "",
+                "c": "BN150"
+            },
+            {
+                "t": "Editorial",
+                "l": "en",
+                "_": "",
+                "c": "BN090"
+            },
+            {
+                "t": "Inventories",
+                "l": "en",
+                "_": "",
+                "c": "BN120"
+            },
+            {
+                "t": "Point of View",
+                "l": "en",
+                "_": "",
+                "c": "BN100"
+            },
+            {
+                "t": "Short Communications",
+                "l": "en",
+                "_": "",
+                "c": "BN140"
+            }
+        ],
+        "v35": [
+            {
+                "_": "1676-0603"
+            }
+        ],
+        "v6": [
+            {
+                "_": "011"
+            }
+        ],
+        "v480": [
+            {
+                "_": "Centro de Referência em Informação Ambiental/CRIA"
+            }
+        ],
+        "v30": [
+            {
+                "_": "Biota Neotrop."
+            }
+        ],
+        "v85": [
+            {
+                "_": "nd"
+            }
+        ],
+        "v880": [
+            {
+                "_": "1676-060320060001"
+            }
+        ],
+        "v31": [
+            {
+                "_": "6"
+            }
+        ],
+        "v122": [
+            {
+                "_": "23"
+            }
+        ],
+        "v32": [
+            {
+                "_": "1"
+            }
+        ],
+        "v117": [
+            {
+                "_": "other"
+            }
+        ],
+        "v151": [
+            {
+                "_": "Biota Neotrop"
+            }
+        ],
+        "v992": [
+            {
+                "_": "scl"
+            }
+        ],
+        "v130": [
+            {
+                "_": "Biota Neotropica"
+            }
+        ],
+        "v200": [
+            {
+                "_": "0"
+            }
+        ],
+        "v43": [
+            {
+                "v": "v.6",
+                "a": "2006",
+                "_": "",
+                "n": "n.1",
+                "t": "Biota Neotrop.",
+                "c": "Campinas",
+                "l": "es"
+            },
+            {
+                "v": "v.6",
+                "a": "2006",
+                "_": "",
+                "n": "n.1",
+                "t": "Biota Neotrop.",
+                "c": "Campinas",
+                "l": "pt"
+            },
+            {
+                "v": "vol.6",
+                "a": "2006",
+                "_": "",
+                "n": "no.1",
+                "t": "Biota Neotrop.",
+                "c": "Campinas",
+                "l": "en"
+            }
+        ],
+        "v701": [
+            {
+                "_": "1"
+            }
+        ],
+        "v991": [
+            {
+                "_": "1"
+            }
+        ],
+        "v65": [
+            {
+                "_": "20060000"
+            }
+        ]
+    }
+}

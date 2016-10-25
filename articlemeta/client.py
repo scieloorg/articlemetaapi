@@ -472,12 +472,13 @@ class ThirftClient(object):
     ARTICLEMETA_THRIFT = thriftpy.load(
         os.path.join(os.path.dirname(__file__))+'/thrift/articlemeta.thrift')
 
-    def __init__(self, domain=None):
+    def __init__(self, domain=None, admintoken=None):
         """
         Cliente thrift para o Articlemeta.
         """
         self.domain = domain or '127.0.0.1:11620'
         self._set_address()
+        self._admintoken = admintoken
 
     def _set_address(self):
 
@@ -507,7 +508,7 @@ class ThirftClient(object):
         """
 
         try:
-            journal = self.client.add_journal(data)
+            journal = self.client.add_journal(data, self._admintoken)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             raise ServerError(e.message)
         except self.ARTICLEMETA_THRIFT.ValueError as e:
@@ -558,6 +559,10 @@ class ThirftClient(object):
             msg = 'Error retrieving journal: %s_%s' % (collection, code)
             raise ServerError(msg)
 
+        if not journal:
+            logger.warning('Journal not found for: %s_%s' % (collection, code))
+            return None
+
         jjournal = None
 
         try:
@@ -567,10 +572,6 @@ class ThirftClient(object):
                 collection, code
             )
             raise ValueError(msg)
-
-        if not jjournal:
-            logger.warning('Journal not found for: %s_%s' % (collection, code))
-            return None
 
         xjournal = Journal(jjournal)
         logger.info('Journal loaded: %s_%s' % (collection, code))
@@ -701,16 +702,16 @@ class ThirftClient(object):
             msg = 'Error retrieving issue: %s_%s' % (collection, code)
             raise ServerError(msg)
 
+        if not issue:
+            logger.warning('Issue not found for: %s_%s' % (collection, code))
+            return None
+
         jissue = None
         try:
             jissue = json.loads(issue)
         except:
             msg = 'Fail to load JSON when retrienving document: %s_%s' % (collection, code)
             raise ValueError(msg)
-
-        if not jissue:
-            logger.warning('Issue not found for: %s_%s' % (collection, code))
-            return None
 
         xissue = Issue(jissue)
         logger.info('Issue loaded: %s_%s' % (collection, code))
@@ -801,6 +802,10 @@ class ThirftClient(object):
             msg = 'Error retrieving document: %s_%s' % (collection, code)
             raise ServerError(msg)
 
+        if not article:
+            logger.warning('Document not found for: %s_%s' % (collection, code))
+            return None
+
         if fmt == 'xylose':
             jarticle = None
             try:
@@ -808,10 +813,6 @@ class ThirftClient(object):
             except:
                 msg = 'Fail to load JSON when retrienving document: %s_%s' % (collection, code)
                 raise ValueError(msg)
-
-            if not jarticle:
-                logger.warning('Document not found for: %s_%s' % (collection, code))
-                return None
 
             xarticle = Article(jarticle)
             logger.info('Document loaded: %s_%s' % (collection, code))
@@ -905,6 +906,10 @@ class ThirftClient(object):
             msg = 'Error retrieving collection: %s_%s' % (collection)
             raise ServerError(msg)
 
+        if not result:
+            logger.warning('Collection not found for: %s' % (code))
+            return None
+
         return result
 
     def collections(self):
@@ -921,10 +926,13 @@ class ThirftClient(object):
 
         result = None
         try:
-            result = self.client.delete_journal(code, collection)
+            result = self.client.delete_journal(code, collection, self._admintoken)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error removing journal: %s_%s' % (collection, code)
             raise ServerError(msg)
+        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+            msg = 'Unautorized access trying remove journal: %s_%s' % (collection, code)
+            raise UnauthorizedAccess(msg)
 
         return json.loads(result)
 
@@ -936,6 +944,9 @@ class ThirftClient(object):
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error removing issue: %s_%s' % (collection, code)
             raise ServerError(msg)
+        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+            msg = 'Unautorized access trying remove issue: %s_%s' % (collection, code)
+            raise UnauthorizedAccess(msg)
 
         return json.loads(result)
 
@@ -947,5 +958,9 @@ class ThirftClient(object):
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error removing document: %s_%s' % (collection, code)
             raise ServerError(msg)
+        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+            msg = 'Unautorized access trying remove document: %s_%s' % (collection, code)
+            raise UnauthorizedAccess(msg)
+
 
         return json.loads(result)
