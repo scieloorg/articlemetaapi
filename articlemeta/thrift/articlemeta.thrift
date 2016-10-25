@@ -80,7 +80,7 @@ service ArticleMeta {
     string delete_journal(1: string code, 2: string collection, 3: string admintoken) throws (1:ServerError server_err, 2:Unauthorized unauthorized_access),
     string delete_issue(1: string code, 2: string collection, 3: string admintoken) throws (1:ServerError server_err, 2:Unauthorized unauthorized_access),
     string delete_article(1: string code, 2: string collection, 3: string admintoken) throws (1:ServerError server_err, 2:Unauthorized unauthorized_access),
-    string add_journal(1: string metadata, 2: string admintoken) throws (1: ValueError value_err, 2:ServerError server_err, 2:Unauthorized unauthorized_access),
-    string add_issue(1: string metadata, 2: string admintoken) throws (1: ValueError value_err, 2:ServerError server_err, 2:Unauthorized unauthorized_access),
-    string add_article(1: string metadata, 2: string admintoken) throws (1: ValueError value_err, 2:ServerError server_err, 2:Unauthorized unauthorized_access)
+    string add_journal(1: string metadata, 2: string admintoken) throws (1: ValueError value_err, 2:ServerError server_err, 3:Unauthorized unauthorized_access),
+    string add_issue(1: string metadata, 2: string admintoken) throws (1: ValueError value_err, 2:ServerError server_err, 3:Unauthorized unauthorized_access),
+    string add_article(1: string metadata, 2: string admintoken) throws (1: ValueError value_err, 2:ServerError server_err, 3:Unauthorized unauthorized_access)
 }
