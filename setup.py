@@ -2,16 +2,16 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'thriftpy>=0.3.1',
-    'requests>=2.8.1',
-    'xylose'
+    'thriftpy==0.3.1',
+    'requests==2.8.1',
+    'xylose==1.16.5'
 ]
 
 tests_require = []
 
 setup(
     name="articlemetaapi",
-    version="1.2.0",
+    version="1.2.1",
     description="Library that implements the endpoints of the ArticleMeta API",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",
@@ -25,9 +25,7 @@ setup(
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3",
     ],
-    dependency_links=[
-        "git+https://git@github.com/scieloorg/xylose.git@1.16.5#egg=xylose"
-    ],
+    dependency_links=[],
     tests_require=tests_require,
     test_suite='tests',
     install_requires=install_requires
