@@ -10,8 +10,8 @@ install_requires = [
 tests_require = []
 
 setup(
-    name="articlemetapi",
-    version="1.1.0",
+    name="articlemetaapi",
+    version="1.2.0",
     description="Library that implements the endpoints of the ArticleMeta API",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",
@@ -24,7 +24,6 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 2.7",
     ],
     dependency_links=[
         "git+https://git@github.com/scieloorg/xylose.git@v1.16.5#egg=xylose"

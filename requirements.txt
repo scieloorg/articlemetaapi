@@ -1,4 +1,4 @@
 thriftpy==0.3.1
 requests==2.8.1
 -e git+https://github.com/scieloorg/xylose@1.16.5#egg=xylose
--e git+https://github.com/scieloorg/articlemetaapi@1.1.0#egg=articlemetaapi
+-e git+https://github.com/scieloorg/articlemetaapi@1.2.0#egg=articlemetaapi
