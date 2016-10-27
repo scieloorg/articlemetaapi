@@ -1,1 +1,1 @@
-recursive-include articlemeta *.csv
+recursive-include articlemeta *.thrift

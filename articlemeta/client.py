@@ -3,6 +3,8 @@ import os
 import thriftpy
 import json
 import logging
+import time
+
 from datetime import datetime
 from datetime import timedelta
 from urllib.parse import urljoin
@@ -69,7 +71,6 @@ class RestfulClient(object):
 
         request = requests.get
         params = params if params else {}
-        params['admintoken'] = self.admintoken
 
         if method == 'POST':
             request = requests.post
@@ -78,6 +79,9 @@ class RestfulClient(object):
 
         result = None
         for attempt in range(self.ATTEMPTS):
+            # Throttling requests to the API. Our servers will throttle accesses to the API from the same IP in 3 per second.
+            # So, to not receive a "too many connections error (249 HTTP ERROR)", do not change this line.
+            time.sleep(0.4)
             try:
                 result = request(url, params=params, timeout=timeout)
                 if result.status_code == 401:
@@ -269,11 +273,10 @@ class RestfulClient(object):
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
         for from_date, until_date in dates_pagination(fdate, udate):
-            params = {
-                'from': from_date,
-                'until': until_date,
-                'offset': 0
-            }
+            params['from'] = from_date
+            params['until'] = until_date
+            params['offset'] = 0
+
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ISSUE_ENDPOINT + '/identifiers')
                 identifiers = self._do_request(url, params=params).get('objects', [])
@@ -307,11 +310,9 @@ class RestfulClient(object):
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
         for from_date, until_date in dates_pagination(fdate, udate):
-            params = {
-                'from': from_date,
-                'until': until_date,
-                'offset': 0
-            }
+            params['from'] = from_date
+            params['until'] = until_date
+            params['offset'] = 0
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ISSUE_ENDPOINT + '/history')
                 identifiers = self._do_request(url, params=params).get('objects', [])
@@ -371,11 +372,9 @@ class RestfulClient(object):
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
         for from_date, until_date in dates_pagination(fdate, udate):
-            params = {
-                'from': from_date,
-                'until': until_date,
-                'offset': 0
-            }
+            params['from'] = from_date
+            params['until'] = until_date
+            params['offset'] = 0
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ARTICLE_ENDPOINT + '/identifiers')
                 identifiers = self._do_request(url, params=params).get('objects', [])
@@ -409,11 +408,9 @@ class RestfulClient(object):
         fdate = from_date or '1500-01-01'
         udate = until_date or datetime.today().isoformat()[:10]
         for from_date, until_date in dates_pagination(fdate, udate):
-            params = {
-                'from': from_date,
-                'until': until_date,
-                'offset': 0
-            }
+            params['from'] = from_date
+            params['until'] = until_date
+            params['offset'] = 0
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ARTICLE_ENDPOINT + '/history')
                 identifiers = self._do_request(url, params=params).get('objects', [])
@@ -468,7 +465,7 @@ class RestfulClient(object):
         return result
 
 
-class ThirftClient(object):
+class ThriftClient(object):
     ARTICLEMETA_THRIFT = thriftpy.load(
         os.path.join(os.path.dirname(__file__))+'/thrift/articlemeta.thrift')
 
