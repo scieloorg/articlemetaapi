@@ -101,13 +101,13 @@ class RestfulClient(object):
         except:
             return result.text
 
-    def journal(self, collection, issn):
+    def journal(self, code, collection):
 
         url = urljoin(self.ARTICLEMETA_URL, self.JOURNAL_ENDPOINT)
 
         params = {
             'collection': collection,
-            'issn': issn
+            'issn': code
         }
 
         result = self._do_request(url, params)
@@ -142,8 +142,8 @@ class RestfulClient(object):
 
             for identifier in identifiers:
                 journal = self.journal(
-                    issn=identifier['code'],
-                    collection=identifier['collection']
+                    identifier['code'],
+                    identifier['collection']
                 )
 
                 yield journal
@@ -185,8 +185,8 @@ class RestfulClient(object):
                         yield (EVENTS_STRUCT(**identifier), identifier, None)
 
                     journal = self.journal(
-                        issn=identifier['code'],
-                        collection=identifier['collection']
+                        identifier['code'],
+                        identifier['collection']
                     )
 
                     if journal and journal.data:
@@ -286,8 +286,8 @@ class RestfulClient(object):
 
                 for identifier in identifiers:
                     issue = self.issue(
-                        code=identifier['code'],
-                        collection=identifier['collection']
+                        identifier['code'],
+                        identifier['collection']
                     )
 
                     yield issue
@@ -327,8 +327,8 @@ class RestfulClient(object):
                         continue
 
                     issue = self.issue(
-                        issn=identifier['code'],
-                        collection=identifier['collection']
+                        identifier['code'],
+                        identifier['collection']
                     )
 
                     if issue and issue.data:
@@ -384,8 +384,8 @@ class RestfulClient(object):
 
                 for identifier in identifiers:
                     document = self.document(
-                        code=identifier['code'],
-                        collection=identifier['collection'],
+                        identifier['code'],
+                        identifier['collection'],
                         fmt=fmt
                     )
                     yield document
@@ -425,8 +425,8 @@ class RestfulClient(object):
                         continue
 
                     document = self.document(
-                        code=identifier['code'],
-                        collection=identifier['collection'],
+                        identifier['code'],
+                        identifier['collection'],
                         fmt=fmt
                     )
 
@@ -887,7 +887,7 @@ class ThriftClient(object):
                         fmt=fmt
                     )
 
-                    if ifdocument and document.data:
+                    if document and document.data:
                         yield (identifier, document)
 
                 offset += LIMIT
