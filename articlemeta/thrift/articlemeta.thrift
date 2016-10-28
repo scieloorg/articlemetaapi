@@ -35,7 +35,7 @@ struct issue_identifiers {
 }
 
 struct journal_identifiers {
-    1: list<string> code,
+    1: string code,
     2: string collection
 }
 
@@ -54,7 +54,7 @@ struct event_issue {
 }
 
 struct event_journal {
-    1: list<string> code,
+    1: string code,
     2: string collection,
     3: string event,
     4: string date

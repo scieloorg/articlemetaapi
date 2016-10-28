@@ -630,7 +630,8 @@ class ThriftClient(object):
                 raise StopIteration
 
             for identifier in identifiers:
-                identifier.code = identifier.code[0]
+
+                identifier.code = identifier.code
                 if only_identifiers is True:
                     yield identifier
                     continue
@@ -667,7 +668,7 @@ class ThriftClient(object):
                     break
 
                 for identifier in identifiers:
-                    identifier.code = identifier.code[0]
+                    identifier.code = identifier.code
                     if only_identifiers is True:
                         yield (identifier, None)
                         continue
