@@ -7,12 +7,20 @@ import time
 
 from datetime import datetime
 from datetime import timedelta
-from urllib.parse import urljoin
+
 from collections import namedtuple
 
 import requests
 from thriftpy.rpc import make_client
 from xylose.scielodocument import Article, Journal, Issue
+
+
+# URLJOIN Python 3 and 2 import compatibilities
+try:
+    from urllib.parse import urljoin
+except:
+    from urlparse import urljoin
+
 
 LIMIT = 1000
 TIME_DELTA = 365
@@ -968,9 +976,9 @@ class ThriftClient(object):
         """
         result = None
         try:
-            result = self.client.get_collection(code=collection)
+            result = self.client.get_collection(code=code)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
-            msg = 'Error retrieving collection: %s_%s' % (collection)
+            msg = 'Error retrieving collection: %s_%s' % (code)
             raise ServerError(msg)
 
         if not result:
@@ -980,19 +988,18 @@ class ThriftClient(object):
         return result
 
     def collections(self, only_identifiers=False):
-
         try:
             identifiers = self.client.get_collection_identifiers()
         except self.ARTICLEMETA_THRIFT.ServerError as e:
-            msg = 'Error retrieving collection: %s_%s' % (collection)
+            msg = 'Error retrieving collections'
             raise ServerError(msg)
 
-            for identifier in identifiers:
-                if only_identifiers is True:
-                    yield identifier
-                    continue
+        for identifier in identifiers:
+            if only_identifiers is True:
+                yield identifier
+                continue
 
-                yield collection(identifier)
+            yield self.collection(identifier.code)
 
     def delete_journal(self, code, collection):
 
