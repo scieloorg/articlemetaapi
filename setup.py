@@ -2,16 +2,16 @@
 from setuptools import setup, find_packages
 
 install_requires = [
-    'thriftpy==0.3.1',
-    'requests==2.8.1',
-    'xylose==1.16.5'
+    'thriftpy>=0.3.1',
+    'requests>=2.8.1',
+    'xylose>=1.16.5'
 ]
 
 tests_require = []
 
 setup(
     name="articlemetaapi",
-    version="1.4.10",
+    version="1.5.10",
     description="Library that implements the endpoints of the ArticleMeta API",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",
