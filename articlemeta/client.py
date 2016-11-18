@@ -520,7 +520,7 @@ class ThriftClient(object):
         """
         Cliente thrift para o Articlemeta.
         """
-        self.domain = domain or '127.0.0.1:11620'
+        self.domain = domain or 'articlemeta.scielo.org:11620'
         self._set_address()
         self._admintoken = admintoken
 
@@ -530,9 +530,9 @@ class ThriftClient(object):
 
         self._address = address[0]
         try:
-            self._port = address[1]
+            self._port = int(address[1])
         except:
-            self._port = '11620'
+            self._port = 11620
 
     @property
     def client(self):
