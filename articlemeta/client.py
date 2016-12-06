@@ -110,14 +110,16 @@ class RestfulClient(object):
         except:
             return result.text
 
-    def journal(self, code, collection):
+    def journal(self, code, collection=None):
 
         url = urljoin(self.ARTICLEMETA_URL, self.JOURNAL_ENDPOINT)
 
         params = {
-            'collection': collection,
             'issn': code
         }
+
+        if collection:
+            params['collection'] = collection
 
         result = self._do_request(url, params)
 
@@ -553,6 +555,9 @@ class ThriftClient(object):
 
         try:
             journal = self.client.add_journal(data, self._admintoken)
+        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+            msg = 'Unautorized access trying add document'
+            raise UnauthorizedAccess(msg)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             raise ServerError(e.message)
         except self.ARTICLEMETA_THRIFT.ValueError as e:
@@ -568,7 +573,10 @@ class ThriftClient(object):
         """
 
         try:
-            issue = self.client.add_issue(data)
+            issue = self.client.add_issue(data, self._admintoken)
+        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+            msg = 'Unautorized access trying add document'
+            raise UnauthorizedAccess(msg)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             raise ServerError(e.message)
         except self.ARTICLEMETA_THRIFT.ValueError as e:
@@ -584,7 +592,10 @@ class ThriftClient(object):
         """
 
         try:
-            document = self.client.add_article(data)
+            document = self.client.add_article(data, self._admintoken)
+        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+            msg = 'Unautorized access trying add document'
+            raise UnauthorizedAccess(msg)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             raise ServerError(e.message)
         except self.ARTICLEMETA_THRIFT.ValueError as e:
@@ -592,13 +603,10 @@ class ThriftClient(object):
 
         return json.loads(document)
 
-    def journal(self, code, collection):
+    def journal(self, code, collection=None):
 
         try:
-            journal = self.client.get_journal(
-                code=code,
-                collection=collection
-            )
+            journal = self.client.get_journal(code, collection)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error retrieving journal: %s_%s' % (collection, code)
             raise ServerError(msg)
@@ -730,20 +738,23 @@ class ThriftClient(object):
             article = self.client.set_aid(
                 code,
                 collection,
-                aid
+                aid,
+                self._admintoken
             )
+        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+            msg = 'Unautorized access trying set doaj id: %s_%s' % (collection, code)
+            raise UnauthorizedAccess(msg)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error senting aid for document: %s_%s' % (collection, code)
             raise ServerError(msg)
 
     def set_doaj_id(self, code, collection, doaj_id):
         try:
-            article = self.client.set_doaj_id(
-                code,
-                collection,
-                doaj_id
-            )
-        except:
+            article = self.client.set_doaj_id(code, collection, doaj_id, self._admintoken)
+        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+            msg = 'Unautorized access trying set doaj id: %s_%s' % (collection, code)
+            raise UnauthorizedAccess(msg)
+        except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error senting doaj id for document: %s_%s' % (collection, code)
             raise ServerError(msg)
 
@@ -1019,7 +1030,7 @@ class ThriftClient(object):
 
         result = None
         try:
-            result = self.client.delete_issue(code, collection)
+            result = self.client.delete_issue(code, collection, self._admintoken)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error removing issue: %s_%s' % (collection, code)
             raise ServerError(msg)
@@ -1035,7 +1046,7 @@ class ThriftClient(object):
         try:
             result = self.client.delete_article(code, collection)
         except self.ARTICLEMETA_THRIFT.ServerError as e:
-            msg = 'Error removing document: %s_%s' % (collection, code)
+            msg = 'Error removing document: %s_%s' % (collection, code, self._admintoken)
             raise ServerError(msg)
         except self.ARTICLEMETA_THRIFT.Unauthorized as e:
             msg = 'Unautorized access trying remove document: %s_%s' % (collection, code)
