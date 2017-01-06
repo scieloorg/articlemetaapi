@@ -1044,7 +1044,7 @@ class ThriftClient(object):
 
         result = None
         try:
-            result = self.client.delete_article(code, collection)
+            result = self.client.delete_article(code, collection, self._admintoken)
         except self.ARTICLEMETA_THRIFT.ServerError:
             msg = 'Error removing document: %s_%s' % (collection, code)
             raise ServerError(msg)
