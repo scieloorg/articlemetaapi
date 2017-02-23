@@ -522,7 +522,7 @@ class ThriftClient(object):
         """
         Cliente thrift para o Articlemeta.
         """
-        self.domain = domain or 'articlemeta.scielo.org:11620'
+        self.domain = domain or 'articlemeta.scielo.org:11621'
         self._set_address()
         self._admintoken = admintoken
 
@@ -545,6 +545,15 @@ class ThriftClient(object):
             self._port
         )
         return client
+
+    def getInterfaceVersion(self):
+        """
+        This method retrieve the version of the thrift interface.
+
+        data: legacy SciELO Documents JSON Type 3.
+        """
+
+        return self.client.getInterfaceVersion()
 
     def add_journal(self, data):
         """
