@@ -369,14 +369,15 @@ class RestfulClient(object):
 
                 params['offset'] += LIMIT
 
-    def document(self, code, collection, fmt='xylose'):
+    def document(self, code, collection, fmt='xylose', body=False):
 
         url = urljoin(self.ARTICLEMETA_URL, self.ARTICLE_ENDPOINT)
 
         params = {
             'collection': collection,
             'code': code,
-            'format': fmt
+            'format': fmt,
+            'body': body
         }
 
         result = self._do_request(url, params, )
@@ -390,7 +391,7 @@ class RestfulClient(object):
         return result
 
     def documents(self, collection=None, issn=None, from_date=None,
-                  until_date=None, fmt='xylose', only_identifiers=False):
+                  until_date=None, fmt='xylose', body=False, only_identifiers=False):
 
         params = {
             'limit': LIMIT
@@ -423,7 +424,8 @@ class RestfulClient(object):
                     document = self.document(
                         identifier['code'],
                         identifier['collection'],
-                        fmt=fmt
+                        fmt=fmt,
+                        body=body
                     )
                     yield document
 
@@ -875,13 +877,14 @@ class ThriftClient(object):
 
                 offset += LIMIT
 
-    def document(self, code, collection, replace_journal_metadata=True, fmt='xylose'):
+    def document(self, code, collection, replace_journal_metadata=True, fmt='xylose', body=False):
         try:
             article = self.client.get_article(
                 code=code,
                 collection=collection,
                 replace_journal_metadata=True,
-                fmt=fmt
+                fmt=fmt,
+                body=body
             )
         except self.ARTICLEMETA_THRIFT.ServerError as e:
             msg = 'Error retrieving document: %s_%s' % (collection, code)
@@ -908,7 +911,7 @@ class ThriftClient(object):
         return article
 
     def documents(self, collection=None, issn=None, from_date=None,
-                  until_date=None, fmt='xylose', extra_filter=None,
+                  until_date=None, fmt='xylose', body=False, extra_filter=None,
                   only_identifiers=False):
 
         fdate = from_date or DEFAULT_FROM_DATE
@@ -939,7 +942,8 @@ class ThriftClient(object):
                         identifier.code,
                         identifier.collection,
                         replace_journal_metadata=True,
-                        fmt=fmt
+                        fmt=fmt,
+                        body=body
                     )
 
                     yield document
