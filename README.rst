@@ -47,7 +47,7 @@ Como usar
     Salud Colectiva 1851-8265
     Salud Pública de México 0036-3634
 
-    In [4]: journal = cl.journal(issn='0864-3466', collection='spa')
+    In [4]: journal = cl.journal(code='0864-3466', collection='spa')
 
     In [5]: journal.title
     Out[5]: 'Revista Cubana de Salud Pública'
