@@ -377,7 +377,7 @@ class RestfulClient(object):
             'collection': collection,
             'code': code,
             'format': fmt,
-            'body': body
+            'body': str(body).lower()
         }
 
         result = self._do_request(url, params, )
@@ -439,7 +439,7 @@ class RestfulClient(object):
                 params['offset'] += LIMIT
 
     def documents_history(self, collection=None, issn=None, from_date=None,
-                          until_date=None, fmt='xylose', only_identifiers=False):
+                          until_date=None, fmt='xylose', only_identifiers=False, body=False):
 
         params = {
             'limit': LIMIT
@@ -477,7 +477,8 @@ class RestfulClient(object):
                     document = self.document(
                         identifier['code'],
                         identifier['collection'],
-                        fmt=fmt
+                        fmt=fmt,
+                        body=body
                     )
 
                     if fmt == 'xylose' and document and document.data:
