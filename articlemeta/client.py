@@ -427,7 +427,6 @@ class RestfulClient(object):
                         fmt=fmt,
                         body=body
                     )
-                    yield document
 
                     if fmt == 'xylose' and document and document.data:
                         yield document

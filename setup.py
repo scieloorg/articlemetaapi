@@ -4,14 +4,14 @@ from setuptools import setup, find_packages
 install_requires = [
     'thriftpy==0.3.1',
     'requests==2.11.1',
-    'xylose==1.18.6'
+    'xylose==1.19.6'
 ]
 
 tests_require = []
 
 setup(
     name="articlemetaapi",
-    version="1.12.18",
+    version="1.12.19",
     description="Library that implements the endpoints of the ArticleMeta API",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",
