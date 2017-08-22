@@ -23,8 +23,7 @@ except:
 
 
 LIMIT = 1000
-TIME_DELTA = 365
-DEFAULT_FROM_DATE = '1900-01-01'
+DEFAULT_FROM_DATE = '1996-01-01'
 
 logger = logging.getLogger(__name__)
 
@@ -44,22 +43,23 @@ class ServerError(ArticleMetaExceptions):
 
 
 def dates_pagination(from_date, until_date):
-    td = timedelta(days=TIME_DELTA)
-    td_plus = timedelta(days=TIME_DELTA+1)
-    fdate = datetime.strptime(from_date, '%Y-%m-%d')
-    udate = datetime.strptime(until_date, '%Y-%m-%d')
+    from_date = datetime.strptime(from_date, '%Y-%m-%d')
+    until_date = datetime.strptime(until_date, '%Y-%m-%d')
 
-    while True:
+    for year in range(from_date.year, until_date.year+1):
 
-        dtrange = fdate + td
+        dtbg = '%d-01-01' % year
+        dtnd = '%d-12-31' % year
 
-        if dtrange > udate:
-            yield (fdate.isoformat()[:10], udate.isoformat()[:10])
-            return
+        if year == from_date.year:
+            yield (from_date.isoformat()[:10], dtnd)
+            continue
 
-        yield (fdate.isoformat()[:10], dtrange.isoformat()[:10])
+        if year == until_date.year:
+            yield (dtbg, until_date.isoformat()[:10])
+            continue
 
-        fdate += td_plus
+        yield (dtbg, dtnd)
 
 
 class RestfulClient(object):
@@ -67,7 +67,9 @@ class RestfulClient(object):
     ARTICLEMETA_URL = 'http://articlemeta.scielo.org'
     JOURNAL_ENDPOINT = '/api/v1/journal'
     ARTICLE_ENDPOINT = '/api/v1/article'
+    ARTICLES_ENDPOINT = '/api/v1/articles'
     ISSUE_ENDPOINT = '/api/v1/issue'
+    ISSUES_ENDPOINT = '/api/v1/issues'
     COLLECTION_ENDPOINT = '/api/v1/collection'
     ATTEMPTS = 10
 
@@ -280,7 +282,45 @@ class RestfulClient(object):
 
         return xresult
 
-    def issues(self, collection=None, issn=None, from_date=None,
+    def issues(
+        self, collection=None, issn=None, from_date=None,
+        until_date=None
+    ):
+
+        params = {
+            'limit': 100
+        }
+
+        if collection:
+            params['collection'] = collection
+
+        if issn:
+            params['issn'] = issn
+
+        fdate = from_date or DEFAULT_FROM_DATE
+        udate = until_date or datetime.today().isoformat()[:10]
+        for from_date, until_date in dates_pagination(fdate, udate):
+            params['from'] = from_date
+            params['until'] = until_date
+            params['offset'] = 0
+
+            while True:
+                url = urljoin(self.ARTICLEMETA_URL, self.ISSUES_ENDPOINT)
+                issues = self._do_request(url, params=params)
+                if issues is None:
+                    break
+
+                issues = issues.get('objects', [])
+
+                if len(issues) == 0:
+                    break
+
+                for issue in issues:
+                    yield Issue(issue)
+
+                params['offset'] += 100
+
+    def issues_by_identifiers(self, collection=None, issn=None, from_date=None,
                until_date=None, only_identifiers=False):
 
         params = {
@@ -390,8 +430,50 @@ class RestfulClient(object):
 
         return result
 
-    def documents(self, collection=None, issn=None, from_date=None,
-                  until_date=None, fmt='xylose', body=False, only_identifiers=False):
+    def documents(
+        self, collection=None, issn=None, from_date=None,
+        until_date=None, fmt='xylose', body=False
+    ):
+
+        params = {
+            'limit': 100,
+            'fmt': fmt,
+            'body': str(body).lower()
+        }
+
+        if collection:
+            params['collection'] = collection
+
+        if issn:
+            params['issn'] = issn
+
+        fdate = from_date or DEFAULT_FROM_DATE
+        udate = until_date or datetime.today().isoformat()[:10]
+        for from_date, until_date in dates_pagination(fdate, udate):
+            params['from'] = from_date
+            params['until'] = until_date
+            params['offset'] = 0
+            while True:
+                url = urljoin(self.ARTICLEMETA_URL, self.ARTICLES_ENDPOINT)
+                articles = self._do_request(url, params=params, timeout=10)
+
+                if articles is None:
+                    break
+
+                articles = articles.get('objects', [])
+
+                if len(articles) == 0:
+                    break
+
+                for article in articles:
+                    yield Article(article)
+
+                params['offset'] += 100
+
+    def documents_by_identifiers(
+        self, collection=None, issn=None, from_date=None,
+        until_date=None, fmt='xylose', body=False, only_identifiers=False
+    ):
 
         params = {
             'limit': LIMIT
@@ -654,14 +736,14 @@ class ThriftClient(object):
 
         return xjournal
 
-    def journals(self, collection=None, issn=None, only_identifiers=False):
+    def journals(self, collection=None, issn=None, only_identifiers=False, limit=LIMIT):
         offset = 0
 
         while True:
             try:
                 with self.client_context() as client:
                     identifiers = client.get_journal_identifiers(
-                        collection=collection, issn=issn, limit=LIMIT, 
+                        collection=collection, issn=issn, limit=limit,
                         offset=offset
                     )
             except self.ARTICLEMETA_THRIFT.ServerError:
@@ -686,10 +768,11 @@ class ThriftClient(object):
                 if journal and journal.data:
                     yield journal
 
-            offset += LIMIT
+            offset += limit
 
     def journals_history(self, collection=None, event=None, code=None,
-                         from_date=None, until_date=None, only_identifiers=False):
+                         from_date=None, until_date=None,
+                         only_identifiers=False, limit=LIMIT):
 
         fdate = from_date or DEFAULT_FROM_DATE
         udate = until_date or datetime.today().isoformat()[:10]
@@ -701,7 +784,7 @@ class ThriftClient(object):
                         identifiers = client.journal_history_changes(
                             collection=collection, event=event, code=code,
                             from_date=from_date, until_date=until_date, 
-                            limit=LIMIT, offset=offset
+                            limit=limit, offset=offset
                         )
                 except self.ARTICLEMETA_THRIFT.ServerError:
                     msg = 'Error retrieving list of journal history: %s_%s' % (collection, code)
@@ -728,7 +811,7 @@ class ThriftClient(object):
                     if journal and journal.data:
                         yield (identifier, journal)
 
-                    offset += LIMIT
+                    offset += limit
 
     def exists_journal(self, code, collection):
         try:
@@ -818,8 +901,46 @@ class ThriftClient(object):
 
         return xissue
 
-    def issues(self, collection=None, issn=None, from_date=None,
-               until_date=None, extra_filter=None, only_identifiers=False):
+    def issues_bulk(
+        self, collection=None, issn=None, from_date=None,
+        until_date=None, extra_filter=None, limit=LIMIT
+    ):
+
+        fdate = from_date or DEFAULT_FROM_DATE
+        udate = until_date or datetime.today().isoformat()[:10]
+
+        for from_date, until_date in dates_pagination(fdate, udate):
+            offset = 0
+            while True:
+                try:
+                    with self.client_context() as client:
+                        issues = client.get_issues(
+                            collection=collection, issn=issn, from_date=from_date,
+                            until_date=until_date, limit=limit, offset=offset,
+                            extra_filter=extra_filter
+                        )
+                except self.ARTICLEMETA_THRIFT.ServerError:
+                    msg = 'Error retrieving list of issue: %s_%s' % (collection, issn)
+                    raise ServerError(msg)
+
+                if issues is None:
+                    break
+
+                issues = json.loads(issues).get('objects', [])
+
+                if len(issues) == 0:
+                    break
+
+                for issue in issues:
+
+                    yield Issue(issue)
+
+                offset += limit
+
+    def issues(
+        self, collection=None, issn=None, from_date=None,
+        until_date=None, extra_filter=None, only_identifiers=False, limit=LIMIT
+    ):
 
         fdate = from_date or DEFAULT_FROM_DATE
         udate = until_date or datetime.today().isoformat()[:10]
@@ -831,7 +952,7 @@ class ThriftClient(object):
                     with self.client_context() as client:
                         identifiers = client.get_issue_identifiers(
                             collection=collection, issn=issn, from_date=from_date,
-                            until_date=until_date, limit=LIMIT, offset=offset,
+                            until_date=until_date, limit=limit, offset=offset,
                             extra_filter=extra_filter)
                 except self.ARTICLEMETA_THRIFT.ServerError:
                     msg = 'Error retrieving list of issue identifiers: %s_%s' % (collection, issn)
@@ -855,10 +976,12 @@ class ThriftClient(object):
                     if issue and issue.data:
                         yield (identifier, issue)
 
-                offset += LIMIT
+                offset += limit
 
-    def issues_history(self, collection=None, event=None, code=None,
-                       from_date=None, until_date=None, only_identifiers=False):
+    def issues_history(
+        self, collection=None, event=None, code=None,
+        from_date=None, until_date=None, only_identifiers=False, limit=LIMIT
+    ):
 
         fdate = from_date or DEFAULT_FROM_DATE
         udate = until_date or datetime.today().isoformat()[:10]
@@ -871,7 +994,7 @@ class ThriftClient(object):
                         identifiers = client.issue_history_changes(
                             collection=collection, event=event, code=code,
                             from_date=from_date, until_date=until_date, 
-                            limit=LIMIT, offset=offset
+                            limit=limit, offset=offset
                         )
                 except self.ARTICLEMETA_THRIFT.ServerError:
                     msg = 'Error retrieving list of issue history: %s_%s' % (collection, code)
@@ -899,7 +1022,7 @@ class ThriftClient(object):
                     if issue and issue.data:
                         yield (identifier, issue)
 
-                offset += LIMIT
+                offset += limit
 
     def document(self, code, collection, replace_journal_metadata=True, fmt='xylose', body=False):
         try:
@@ -935,9 +1058,45 @@ class ThriftClient(object):
         logger.info('Document loaded: %s_%s', collection, code)
         return article
 
+    def documents_bulk(
+        self, collection=None, issn=None, from_date=None,
+        until_date=None, fmt='xylose', body=False, extra_filter=None, limit=LIMIT
+    ):
+
+        fdate = from_date or DEFAULT_FROM_DATE
+        udate = until_date or datetime.today().isoformat()[:10]
+
+        for from_date, until_date in dates_pagination(fdate, udate):
+            offset = 0
+            while True:
+                try:
+                    with self.client_context() as client:
+                        articles = client.get_articles(
+                            collection=collection, issn=issn,
+                            from_date=from_date, until_date=until_date,
+                            limit=limit, offset=offset,
+                            extra_filter=extra_filter)
+                except self.ARTICLEMETA_THRIFT.ServerError:
+                    msg = 'Error retrieving list of article: %s_%s' % (collection, issn)
+                    raise ServerError(msg)
+
+                if articles is None:
+                    break
+
+                articles = json.loads(articles).get('objects', [])
+
+                if len(articles) == 0:
+                    break
+
+                for article in articles:
+
+                    yield Article(article)
+
+                offset += limit
+
     def documents(self, collection=None, issn=None, from_date=None,
                   until_date=None, fmt='xylose', body=False, extra_filter=None,
-                  only_identifiers=False):
+                  only_identifiers=False, limit=LIMIT):
 
         fdate = from_date or DEFAULT_FROM_DATE
         udate = until_date or datetime.today().isoformat()[:10]
@@ -950,7 +1109,7 @@ class ThriftClient(object):
                         identifiers = client.get_article_identifiers(
                             collection=collection, issn=issn,
                             from_date=from_date, until_date=until_date,
-                            limit=LIMIT, offset=offset,
+                            limit=limit, offset=offset,
                             extra_filter=extra_filter)
                 except self.ARTICLEMETA_THRIFT.ServerError:
                     msg = 'Error retrieving list of article identifiers: %s_%s' % (collection, issn)
@@ -975,11 +1134,11 @@ class ThriftClient(object):
 
                     yield document
 
-                offset += LIMIT
+                offset += limit
 
     def documents_history(self, collection=None, event=None, code=None,
                           from_date=None, until_date=None, fmt='xylose',
-                          only_identifiers=False):
+                          only_identifiers=False, limit=LIMIT):
 
         fdate = from_date or DEFAULT_FROM_DATE
         udate = until_date or datetime.today().isoformat()[:10]
@@ -992,7 +1151,7 @@ class ThriftClient(object):
                         identifiers = client.article_history_changes(
                             collection=collection, event=event, code=code,
                             from_date=from_date, until_date=until_date,
-                            limit=LIMIT, offset=offset
+                            limit=limit, offset=offset
                         )
                 except self.ARTICLEMETA_THRIFT.ServerError:
                     msg = 'Error retrieving list of article history: %s_%s' % (collection, code)
@@ -1020,7 +1179,7 @@ class ThriftClient(object):
 
                     yield (identifier, document)
 
-                offset += LIMIT
+                offset += limit
 
     def collection(self, code):
         """
