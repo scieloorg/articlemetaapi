@@ -606,6 +606,7 @@ class ThriftClient(object):
         """
         Cliente thrift para o Articlemeta.
         """
+
         self.domain = domain or 'articlemeta.scielo.org:11621'
         self._set_address()
         self._admintoken = admintoken
@@ -1103,6 +1104,7 @@ class ThriftClient(object):
 
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
+            print(from_date, until_date, limit, offset)
             while True:
                 try:
                     with self.client_context() as client:
@@ -1111,6 +1113,8 @@ class ThriftClient(object):
                             from_date=from_date, until_date=until_date,
                             limit=limit, offset=offset,
                             extra_filter=extra_filter)
+
+                        import pdb; pdb.set_trace()
                 except self.ARTICLEMETA_THRIFT.ServerError:
                     msg = 'Error retrieving list of article identifiers: %s_%s' % (collection, issn)
                     raise ServerError(msg)
