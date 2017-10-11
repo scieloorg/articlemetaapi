@@ -112,16 +112,14 @@ class RestfulClient(object):
         except:
             return result.text
 
-    def journal(self, code, collection=None):
+    def journal(self, code, collection):
 
         url = urljoin(self.ARTICLEMETA_URL, self.JOURNAL_ENDPOINT)
 
         params = {
-            'issn': code
+            'issn': code,
+            'collection': collection
         }
-
-        if collection:
-            params['collection'] = collection
 
         result = self._do_request(url, params)
 
