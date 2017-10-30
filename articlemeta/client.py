@@ -4,6 +4,7 @@ import thriftpy
 import json
 import logging
 import time
+import copy
 
 from datetime import datetime
 from datetime import timedelta
@@ -11,7 +12,8 @@ from datetime import timedelta
 from collections import namedtuple
 
 import requests
-from thriftpy.rpc import make_client, client_context
+from thriftpy.rpc import make_client
+from thriftpy.transport import TTransportException
 from xylose.scielodocument import Article, Journal, Issue
 
 
@@ -597,6 +599,7 @@ class RestfulClient(object):
 
 
 class ThriftClient(object):
+    ATTEMPTS = 10
     ARTICLEMETA_THRIFT = thriftpy.load(
         os.path.join(os.path.dirname(__file__))+'/thrift/articlemeta.thrift')
 
@@ -629,12 +632,36 @@ class ThriftClient(object):
         )
         return client
 
-    def client_context(self):
-        return client_context(
-            self.ARTICLEMETA_THRIFT.ArticleMeta,
-            self._address,
-            self._port
-        )
+    def dispatcher(self, *args, **kwargs):
+
+        for attempt in range(self.ATTEMPTS):
+            try:
+                func = args[0]
+                return getattr(self.client, func)(*args[1:], **kwargs)
+            except TTransportException as e:
+                msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
+                    str(func), str(args[1:]), str(kwargs), e.message
+                )
+                logger.warning("Request Retry (%d,%d): %s", attempt+1, self.ATTEMPTS, msg)
+                time.sleep(self.ATTEMPTS*2)
+            except self.ARTICLEMETA_THRIFT.ServerError as e:
+                msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
+                    str(func), str(args[1:]), str(kwargs), e.message
+                )
+                logger.warning("Request Retry (%d,%d): %s", attempt+1, self.ATTEMPTS, msg)
+                time.sleep(self.ATTEMPTS*2)
+            except self.ARTICLEMETA_THRIFT.Unauthorized:
+                msg = 'Unautorized access to articlemeta: %s args: %s kwargs: %s' % (
+                    str(func), str(args[1:]), str(kwargs)
+                )
+                raise UnauthorizedAccess(msg)
+            except self.ARTICLEMETA_THRIFT.ValueError as e:
+                msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
+                    str(func), str(args[1:]), str(kwargs), e.message
+                )
+                raise ValueError(msg)
+
+        raise ServerError(msg)
 
     def getInterfaceVersion(self):
         """
@@ -642,8 +669,10 @@ class ThriftClient(object):
 
         data: legacy SciELO Documents JSON Type 3.
         """
-        with self.client_context() as client:
-            version = client.getInterfaceVersion()
+
+        version = self.dispatcher(
+            'getInterfaceVersion'
+        )
 
         return version
 
@@ -654,16 +683,11 @@ class ThriftClient(object):
         data: legacy SciELO Documents JSON Type 3.
         """
 
-        try:
-            with self.client_context() as client:
-                journal = client.add_journal(data, self._admintoken)
-        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
-            msg = 'Unautorized access trying add document'
-            raise UnauthorizedAccess(msg)
-        except self.ARTICLEMETA_THRIFT.ServerError as e:
-            raise ServerError(e.message)
-        except self.ARTICLEMETA_THRIFT.ValueError as e:
-            raise ValueError(e.message)
+        journal = self.dispatcher(
+            'add_journal',
+            data,
+            self._admintoken
+        )
 
         return json.loads(journal)
 
@@ -674,16 +698,11 @@ class ThriftClient(object):
         data: legacy SciELO Documents JSON Type 3.
         """
 
-        try:
-            with self.client_context() as client:
-                issue = client.add_issue(data, self._admintoken)
-        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
-            msg = 'Unautorized access trying add document'
-            raise UnauthorizedAccess(msg)
-        except self.ARTICLEMETA_THRIFT.ServerError as e:
-            raise ServerError(e.message)
-        except self.ARTICLEMETA_THRIFT.ValueError as e:
-            raise ValueError(e.message)
+        issue = self.dispatcher(
+            'add_issue',
+            data,
+            self._admintoken
+        )
 
         return json.loads(issue)
 
@@ -694,27 +713,21 @@ class ThriftClient(object):
         data: legacy SciELO Documents JSON Type 3.
         """
 
-        try:
-            with self.client_context() as client:
-                document = client.add_article(data, self._admintoken)
-        except self.ARTICLEMETA_THRIFT.Unauthorized as e:
-            msg = 'Unautorized access trying add document'
-            raise UnauthorizedAccess(msg)
-        except self.ARTICLEMETA_THRIFT.ServerError as e:
-            raise ServerError(e.message)
-        except self.ARTICLEMETA_THRIFT.ValueError as e:
-            raise ValueError(e.message)
+        document = self.dispatcher(
+            'add_article',
+            data,
+            self._admintoken
+        )
 
         return json.loads(document)
 
     def journal(self, code, collection=None):
 
-        try:
-            with self.client_context() as client:
-                journal = client.get_journal(code, collection)
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error retrieving journal: %s_%s' % (collection, code)
-            raise ServerError(msg)
+        journal = self.dispatcher(
+            'get_journal',
+            code,
+            collection
+        )
 
         if not journal:
             logger.warning('Journal not found for: %s_%s', collection, code)
@@ -739,15 +752,12 @@ class ThriftClient(object):
         offset = 0
 
         while True:
-            try:
-                with self.client_context() as client:
-                    identifiers = client.get_journal_identifiers(
-                        collection=collection, issn=issn, limit=limit,
-                        offset=offset
-                    )
-            except self.ARTICLEMETA_THRIFT.ServerError:
-                msg = 'Error retrieving list of journal identifiers: %s_%s' % (collection, issn)
-                raise ServerError(msg)
+
+            identifiers = self.dispatcher(
+                'get_journal_identifiers',
+                collection=collection, issn=issn, limit=limit,
+                offset=offset
+            )
 
             if len(identifiers) == 0:
                 raise StopIteration
@@ -778,16 +788,12 @@ class ThriftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                try:
-                    with self.client_context() as client:
-                        identifiers = client.journal_history_changes(
-                            collection=collection, event=event, code=code,
-                            from_date=from_date, until_date=until_date, 
-                            limit=limit, offset=offset
-                        )
-                except self.ARTICLEMETA_THRIFT.ServerError:
-                    msg = 'Error retrieving list of journal history: %s_%s' % (collection, code)
-                    raise ServerError(msg)
+                identifiers = self.dispatcher(
+                    'journal_history_changes',
+                    collection=collection, event=event, code=code,
+                    from_date=from_date, until_date=until_date,
+                    limit=limit, offset=offset
+                )
 
                 if len(identifiers) == 0:
                     break
@@ -813,76 +819,52 @@ class ThriftClient(object):
                     offset += limit
 
     def exists_journal(self, code, collection):
-        try:
-            with self.client_context() as client:
-                return client.exists_journal(
-                    code,
-                    collection
-                )
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error checking if journal exists: %s_%s' % (collection, code)
-            raise ServerError(msg)
+
+        return self.dispatcher(
+            'exists_journal',
+            code,
+            collection
+        )
 
     def exists_issue(self, code, collection):
-        try:
-            with self.client_context() as client:
-                return client.exists_issue(
-                    code,
-                    collection
-                )
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error checking if issue exists: %s_%s' % (collection, code)
-            raise ServerError(msg)
+        return self.dispatcher(
+            'exists_issue',
+            code,
+            collection
+        )
 
     def exists_document(self, code, collection):
-        try:
-            with self.client_context() as client:
-                return client.exists_article(
-                    code,
-                    collection
-                )
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error checking if document exists: %s_%s' % (collection, code)
-            raise ServerError(msg)
+        return self.dispatcher(
+            'exists_article',
+            code,
+            collection
+        )
 
     def set_aid(self, code, collection, aid):
-        try:
-            with self.client_context() as client:
-                article = client.set_aid(
-                    code,
-                    collection,
-                    aid,
-                    self._admintoken
-                )
-        except self.ARTICLEMETA_THRIFT.Unauthorized:
-            msg = 'Unautorized access trying set doaj id: %s_%s' % (collection, code)
-            raise UnauthorizedAccess(msg)
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error senting aid for document: %s_%s' % (collection, code)
-            raise ServerError(msg)
+
+        self.dispatcher(
+            'set_aid',
+            code,
+            collection,
+            aid,
+            self._admintoken
+        )
 
     def set_doaj_id(self, code, collection, doaj_id):
-        try:
-            with self.client_context() as client:
-                article = client.set_doaj_id(code, collection, doaj_id, self._admintoken)
-        except self.ARTICLEMETA_THRIFT.Unauthorized:
-            msg = 'Unautorized access trying set doaj id: %s_%s' % (collection, code)
-            raise UnauthorizedAccess(msg)
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error senting doaj id for document: %s_%s' % (collection, code)
-            raise ServerError(msg)
+        self.dispatcher(
+            'set_doaj_id',
+            code, collection,
+            doaj_id,
+            self._admintoken
+        )
 
     def issue(self, code, collection, replace_journal_metadata=True):
-        try:
-            with self.client_context() as client:
-                issue = client.get_issue(
-                    code=code,
-                    collection=collection,
-                    replace_journal_metadata=True
-                )
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error retrieving issue: %s_%s' % (collection, code)
-            raise ServerError(msg)
+        issue = self.dispatcher(
+            'get_issue',
+            code=code,
+            collection=collection,
+            replace_journal_metadata=True
+        )
 
         if not issue:
             logger.warning('Issue not found for: %s_%s', collection, code)
@@ -911,16 +893,12 @@ class ThriftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                try:
-                    with self.client_context() as client:
-                        issues = client.get_issues(
-                            collection=collection, issn=issn, from_date=from_date,
-                            until_date=until_date, limit=limit, offset=offset,
-                            extra_filter=extra_filter
-                        )
-                except self.ARTICLEMETA_THRIFT.ServerError:
-                    msg = 'Error retrieving list of issue: %s_%s' % (collection, issn)
-                    raise ServerError(msg)
+                issues = self.dispatcher(
+                    'get_issues',
+                    collection=collection, issn=issn, from_date=from_date,
+                    until_date=until_date, limit=limit, offset=offset,
+                    extra_filter=extra_filter
+                )
 
                 if issues is None:
                     break
@@ -947,15 +925,12 @@ class ThriftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                try:
-                    with self.client_context() as client:
-                        identifiers = client.get_issue_identifiers(
-                            collection=collection, issn=issn, from_date=from_date,
-                            until_date=until_date, limit=limit, offset=offset,
-                            extra_filter=extra_filter)
-                except self.ARTICLEMETA_THRIFT.ServerError:
-                    msg = 'Error retrieving list of issue identifiers: %s_%s' % (collection, issn)
-                    raise ServerError(msg)
+                identifiers = self.dispatcher(
+                    'get_issue_identifiers',
+                    collection=collection, issn=issn, from_date=from_date,
+                    until_date=until_date, limit=limit, offset=offset,
+                    extra_filter=extra_filter
+                )
 
                 if len(identifiers) == 0:
                     break
@@ -988,16 +963,12 @@ class ThriftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                try:
-                    with self.client_context() as client:
-                        identifiers = client.issue_history_changes(
-                            collection=collection, event=event, code=code,
-                            from_date=from_date, until_date=until_date, 
-                            limit=limit, offset=offset
-                        )
-                except self.ARTICLEMETA_THRIFT.ServerError:
-                    msg = 'Error retrieving list of issue history: %s_%s' % (collection, code)
-                    raise ServerError(msg)
+                identifiers = self.dispatcher(
+                    'issue_history_changes',
+                    collection=collection, event=event, code=code,
+                    from_date=from_date, until_date=until_date,
+                    limit=limit, offset=offset
+                )
 
                 if len(identifiers) == 0:
                     break
@@ -1024,18 +995,15 @@ class ThriftClient(object):
                 offset += limit
 
     def document(self, code, collection, replace_journal_metadata=True, fmt='xylose', body=False):
-        try:
-            with self.client_context() as client:
-                article = client.get_article(
-                    code=code,
-                    collection=collection,
-                    replace_journal_metadata=True,
-                    fmt=fmt,
-                    body=body
-                )
-        except self.ARTICLEMETA_THRIFT.ServerError as e:
-            msg = 'Error retrieving document: %s_%s' % (collection, code)
-            raise ServerError(msg)
+
+        article = self.dispatcher(
+            'get_article',
+            code=code,
+            collection=collection,
+            replace_journal_metadata=True,
+            fmt=fmt,
+            body=body
+        )
 
         if not article:
             logger.warning('Document not found for: %s_%s', collection, code)
@@ -1068,16 +1036,13 @@ class ThriftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                try:
-                    with self.client_context() as client:
-                        articles = client.get_articles(
-                            collection=collection, issn=issn,
-                            from_date=from_date, until_date=until_date,
-                            limit=limit, offset=offset,
-                            extra_filter=extra_filter)
-                except self.ARTICLEMETA_THRIFT.ServerError:
-                    msg = 'Error retrieving list of article: %s_%s' % (collection, issn)
-                    raise ServerError(msg)
+                articles = self.dispatcher(
+                    'get_articles',
+                    collection=collection, issn=issn,
+                    from_date=from_date, until_date=until_date,
+                    limit=limit, offset=offset,
+                    extra_filter=extra_filter
+                )
 
                 if articles is None:
                     break
@@ -1103,17 +1068,13 @@ class ThriftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                try:
-                    with self.client_context() as client:
-                        identifiers = client.get_article_identifiers(
-                            collection=collection, issn=issn,
-                            from_date=from_date, until_date=until_date,
-                            limit=limit, offset=offset,
-                            extra_filter=extra_filter)
-
-                except self.ARTICLEMETA_THRIFT.ServerError:
-                    msg = 'Error retrieving list of article identifiers: %s_%s' % (collection, issn)
-                    raise ServerError(msg)
+                identifiers = self.dispatcher(
+                    'get_article_identifiers',
+                    collection=collection, issn=issn,
+                    from_date=from_date, until_date=until_date,
+                    limit=limit, offset=offset,
+                    extra_filter=extra_filter
+                )
 
                 if len(identifiers) == 0:
                     break
@@ -1146,16 +1107,12 @@ class ThriftClient(object):
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
-                try:
-                    with self.client_context() as client:
-                        identifiers = client.article_history_changes(
-                            collection=collection, event=event, code=code,
-                            from_date=from_date, until_date=until_date,
-                            limit=limit, offset=offset
-                        )
-                except self.ARTICLEMETA_THRIFT.ServerError:
-                    msg = 'Error retrieving list of article history: %s_%s' % (collection, code)
-                    raise ServerError(msg)
+                identifiers = self.dispatcher(
+                    'article_history_changes',
+                    collection=collection, event=event, code=code,
+                    from_date=from_date, until_date=until_date,
+                    limit=limit, offset=offset
+                )
 
                 if len(identifiers) == 0:
                     break
@@ -1186,12 +1143,10 @@ class ThriftClient(object):
         Retrieve the collection ids according to the given 3 letters acronym
         """
         result = None
-        try:
-            with self.client_context() as client:
-                result = client.get_collection(code=code)
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error retrieving collection: %s_%s' % (code)
-            raise ServerError(msg)
+        result = self.dispatcher(
+            'get_collection',
+            code=code
+        )
 
         if not result:
             logger.warning('Collection not found for: %s', code)
@@ -1200,12 +1155,9 @@ class ThriftClient(object):
         return result
 
     def collections(self, only_identifiers=False):
-        try:
-            with self.client_context() as client:
-                identifiers = client.get_collection_identifiers()
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error retrieving collections'
-            raise ServerError(msg)
+        identifiers = self.dispatcher(
+            'get_collection_identifiers'
+        )
 
         for identifier in identifiers:
             if only_identifiers is True:
@@ -1217,56 +1169,35 @@ class ThriftClient(object):
     def delete_journal(self, code, collection):
 
         result = None
-        try:
-            with self.client_context() as client:
-                result = client.delete_journal(
-                        code,
-                        collection,
-                        self._admintoken
-                )
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error removing journal: %s_%s' % (collection, code)
-            raise ServerError(msg)
-        except self.ARTICLEMETA_THRIFT.Unauthorized:
-            msg = 'Unautorized access trying remove journal: %s_%s' % (collection, code)
-            raise UnauthorizedAccess(msg)
+        result = self.dispatcher(
+            'delete_journal',
+            code,
+            collection,
+            self._admintoken
+        )
 
         return json.loads(result)
 
     def delete_issue(self, code, collection):
 
         result = None
-        try:
-            with self.client_context() as client:
-                result = client.delete_issue(
-                        code,
-                        collection,
-                        self._admintoken
-                )
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error removing issue: %s_%s' % (collection, code)
-            raise ServerError(msg)
-        except self.ARTICLEMETA_THRIFT.Unauthorized:
-            msg = 'Unautorized access trying remove issue: %s_%s' % (collection, code)
-            raise UnauthorizedAccess(msg)
+        result = self.dispatcher(
+            'delete_issue',
+            code,
+            collection,
+            self._admintoken
+        )
 
         return json.loads(result)
 
     def delete_document(self, code, collection):
 
         result = None
-        try:
-            with self.client_context() as client:
-                result = client.delete_article(
-                        code,
-                        collection,
-                        self._admintoken
-                )
-        except self.ARTICLEMETA_THRIFT.ServerError:
-            msg = 'Error removing document: %s_%s' % (collection, code)
-            raise ServerError(msg)
-        except self.ARTICLEMETA_THRIFT.Unauthorized:
-            msg = 'Unautorized access trying remove document: %s_%s' % (collection, code)
-            raise UnauthorizedAccess(msg)
+        result = self.dispatcher(
+            'delete_article',
+            code,
+            collection,
+            self._admintoken
+        )
 
         return json.loads(result)
