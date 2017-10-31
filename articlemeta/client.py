@@ -647,29 +647,29 @@ class ThriftClient(object):
                 return response
             except TTransportException as e:
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
-                    str(func), str(args[1:]), str(kwargs), e.message
+                    str(func), str(args[1:]), str(kwargs), str(e)
                 )
                 logger.warning("Request Retry (%d,%d): %s", attempt+1, self.ATTEMPTS, msg)
                 time.sleep(self.ATTEMPTS*2)
             except self.ARTICLEMETA_THRIFT.ServerError as e:
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
-                    str(func), str(args[1:]), str(kwargs), e.message
+                    str(func), str(args[1:]), str(kwargs), str(e)
                 )
                 logger.warning("Request Retry (%d,%d): %s", attempt+1, self.ATTEMPTS, msg)
                 time.sleep(self.ATTEMPTS*2)
-            except self.ARTICLEMETA_THRIFT.Unauthorized:
-                msg = 'Unautorized access to articlemeta: %s args: %s kwargs: %s' % (
-                    str(func), str(args[1:]), str(kwargs)
+            except self.ARTICLEMETA_THRIFT.Unauthorized as e:
+                msg = 'Unautorized access to articlemeta: %s args: %s kwargs: %s message: %s' % (
+                    str(func), str(args[1:]), str(kwargs), str(e)
                 )
                 raise UnauthorizedAccess(msg)
             except self.ARTICLEMETA_THRIFT.ValueError as e:
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
-                    str(func), str(args[1:]), str(kwargs), e.message
+                    str(func), str(args[1:]), str(kwargs), str(e)
                 )
                 raise ValueError(msg)
             except Exception as e:
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
-                    str(func), str(args[1:]), str(kwargs), e.message
+                    str(func), str(args[1:]), str(kwargs), str(e)
                 )
                 time.sleep(self.ATTEMPTS*2)
 
