@@ -4,7 +4,6 @@ import thriftpy
 import json
 import logging
 import time
-import copy
 
 from datetime import datetime
 from datetime import timedelta
@@ -12,7 +11,7 @@ from datetime import timedelta
 from collections import namedtuple
 
 import requests
-from thriftpy.rpc import make_client
+from thriftpy.rpc import make_client, client_context
 from thriftpy.transport import TTransportException
 from xylose.scielodocument import Article, Journal, Issue
 
@@ -625,19 +624,27 @@ class ThriftClient(object):
     @property
     def client(self):
 
-        client = make_client(
+        return make_client(
             self.ARTICLEMETA_THRIFT.ArticleMeta,
             self._address,
             self._port
         )
-        return client
+
+    def client_cntxt(self):
+        return client_context(
+            self.ARTICLEMETA_THRIFT.ArticleMeta,
+            self._address,
+            self._port
+        )
 
     def dispatcher(self, *args, **kwargs):
 
         for attempt in range(self.ATTEMPTS):
             try:
                 func = args[0]
-                return getattr(self.client, func)(*args[1:], **kwargs)
+                with self.client_cntxt() as cl:
+                    response = getattr(cl, func)(*args[1:], **kwargs)
+                return response
             except TTransportException as e:
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
                     str(func), str(args[1:]), str(kwargs), e.message
@@ -660,6 +667,12 @@ class ThriftClient(object):
                     str(func), str(args[1:]), str(kwargs), e.message
                 )
                 raise ValueError(msg)
+            except Exception as e:
+                msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
+                    str(func), str(args[1:]), str(kwargs), e.message
+                )
+                time.sleep(self.ATTEMPTS*2)
+
 
         raise ServerError(msg)
 
