@@ -1022,7 +1022,7 @@ class ThriftClient(object):
             logger.warning('Document not found for: %s_%s', collection, code)
             return None
 
-        if fmt == 'xylose':
+        if fmt in ['xylose', 'opac']:
             jarticle = None
             try:
                 jarticle = json.loads(article)
