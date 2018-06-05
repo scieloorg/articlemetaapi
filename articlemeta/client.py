@@ -1214,3 +1214,8 @@ class ThriftClient(object):
         )
 
         return json.loads(result)
+
+    def get_issue_code_from_label(self, label, journal_code, collection):
+        return self.dispatcher('get_issue_code_from_label',
+                label, journal_code, collection)
+
