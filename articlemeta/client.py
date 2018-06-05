@@ -667,12 +667,6 @@ class ThriftClient(object):
                     str(func), str(args[1:]), str(kwargs), str(e)
                 )
                 raise ValueError(msg)
-            except Exception as e:
-                msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
-                    str(func), str(args[1:]), str(kwargs), str(e)
-                )
-                time.sleep(self.ATTEMPTS*2)
-
 
         raise ServerError(msg)
 
