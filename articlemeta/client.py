@@ -602,7 +602,7 @@ class ThriftClient(object):
     ARTICLEMETA_THRIFT = thriftpy.load(
         os.path.join(os.path.dirname(__file__))+'/thrift/articlemeta.thrift')
 
-    def __init__(self, domain=None, admintoken=None):
+    def __init__(self, domain=None, admintoken=None, timeout=5000):
         """
         Cliente thrift para o Articlemeta.
         """
@@ -610,6 +610,7 @@ class ThriftClient(object):
         self.domain = domain or 'articlemeta.scielo.org:11621'
         self._set_address()
         self._admintoken = admintoken
+        self._timeout = timeout
 
     def _set_address(self):
 
@@ -627,14 +628,17 @@ class ThriftClient(object):
         return make_client(
             self.ARTICLEMETA_THRIFT.ArticleMeta,
             self._address,
-            self._port
+            self._port,
+            timeout=self._timeout
         )
 
     def client_cntxt(self):
         return client_context(
             self.ARTICLEMETA_THRIFT.ArticleMeta,
             self._address,
-            self._port
+            self._port,
+            socket_timeout=self._timeout,
+            connect_timeout=self._timeout
         )
 
     def dispatcher(self, *args, **kwargs):

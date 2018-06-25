@@ -1,3 +1,0 @@
-thriftpy==0.3.1
-requests==2.11.1
-xylose==1.18.5
