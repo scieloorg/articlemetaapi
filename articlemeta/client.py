@@ -150,7 +150,7 @@ class RestfulClient(object):
             identifiers = self._do_request(url, params=params).get('objects', [])
 
             if len(identifiers) == 0:
-                raise StopIteration
+                return
 
             for identifier in identifiers:
 
@@ -771,7 +771,7 @@ class ThriftClient(object):
             )
 
             if len(identifiers) == 0:
-                raise StopIteration
+                return
 
             for identifier in identifiers:
 
