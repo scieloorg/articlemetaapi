@@ -656,7 +656,7 @@ class ThriftClient(object):
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
                     str(func), str(args[1:]), str(kwargs), str(e)
                 )
-                logger.warning("Request Retry (%d,%d): %s", attempt+1, self.ATTEMPTS, msg)
+                logger.info("Request Retry (%d,%d): %s", attempt+1, self.ATTEMPTS, msg)
                 time.sleep(self.ATTEMPTS*2)
 
             except self.ARTICLEMETA_THRIFT.Unauthorized as e:
@@ -740,7 +740,7 @@ class ThriftClient(object):
         )
 
         if not journal:
-            logger.warning('Journal not found for: %s_%s', collection, code)
+            logger.info('Journal not found for: %s_%s', collection, code)
             return None
 
         jjournal = None
@@ -877,7 +877,7 @@ class ThriftClient(object):
         )
 
         if not issue:
-            logger.warning('Issue not found for: %s_%s', collection, code)
+            logger.info('Issue not found for: %s_%s', collection, code)
             return None
 
         jissue = None
@@ -1016,7 +1016,7 @@ class ThriftClient(object):
         )
 
         if not article:
-            logger.warning('Document not found for: %s_%s', collection, code)
+            logger.info('Document not found for: %s_%s', collection, code)
             return None
 
         if fmt in ['xylose', 'opac']:
@@ -1159,7 +1159,7 @@ class ThriftClient(object):
         )
 
         if not result:
-            logger.warning('Collection not found for: %s', code)
+            logger.info('Collection not found for: %s', code)
             return None
 
         return result
