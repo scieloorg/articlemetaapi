@@ -4,6 +4,7 @@ import thriftpy
 import json
 import logging
 import time
+import socket
 
 from datetime import datetime
 from datetime import timedelta
@@ -649,23 +650,21 @@ class ThriftClient(object):
                 with self.client_cntxt() as cl:
                     response = getattr(cl, func)(*args[1:], **kwargs)
                 return response
-            except TTransportException as e:
+
+            except (TTransportException, self.ARTICLEMETA_THRIFT.ServerError, 
+                    socket.timeout) as e:
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
                     str(func), str(args[1:]), str(kwargs), str(e)
                 )
                 logger.warning("Request Retry (%d,%d): %s", attempt+1, self.ATTEMPTS, msg)
                 time.sleep(self.ATTEMPTS*2)
-            except self.ARTICLEMETA_THRIFT.ServerError as e:
-                msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
-                    str(func), str(args[1:]), str(kwargs), str(e)
-                )
-                logger.warning("Request Retry (%d,%d): %s", attempt+1, self.ATTEMPTS, msg)
-                time.sleep(self.ATTEMPTS*2)
+
             except self.ARTICLEMETA_THRIFT.Unauthorized as e:
                 msg = 'Unautorized access to articlemeta: %s args: %s kwargs: %s message: %s' % (
                     str(func), str(args[1:]), str(kwargs), str(e)
                 )
                 raise UnauthorizedAccess(msg)
+
             except self.ARTICLEMETA_THRIFT.ValueError as e:
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
                     str(func), str(args[1:]), str(kwargs), str(e)
