@@ -15,8 +15,6 @@ setuptools.setup(
     description="SciELO ArticleMeta SDK for Python",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",
-    maintainer="Gustavo Fonseca",
-    maintainer_email="fabio.batalha@scielo.org",
     url="http://github.com/scieloorg/articlemetaapi",
     packages=setuptools.find_packages(
         exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
