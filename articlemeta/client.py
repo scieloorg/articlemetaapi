@@ -1,6 +1,5 @@
 # coding: utf-8
 import os
-import thriftpy
 import json
 import logging
 import time
@@ -12,8 +11,9 @@ from datetime import timedelta
 from collections import namedtuple
 
 import requests
-from thriftpy.rpc import make_client, client_context
-from thriftpy.transport import TTransportException
+import thriftpy2
+from thriftpy2.rpc import make_client, client_context
+from thriftpy2.transport import TTransportException
 from xylose.scielodocument import Article, Journal, Issue
 
 
@@ -600,7 +600,7 @@ class RestfulClient(object):
 
 class ThriftClient(object):
     ATTEMPTS = 10
-    ARTICLEMETA_THRIFT = thriftpy.load(
+    ARTICLEMETA_THRIFT = thriftpy2.load(
         os.path.join(os.path.dirname(__file__))+'/thrift/articlemeta.thrift')
 
     def __init__(self, domain=None, admintoken=None, timeout=5000):
