@@ -11,7 +11,7 @@ tests_require = []
 
 setuptools.setup(
     name="articlemetaapi",
-    version="1.26.5",
+    version="1.26.6",
     description="SciELO ArticleMeta SDK for Python",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",
