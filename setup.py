@@ -4,14 +4,14 @@ import setuptools
 install_requires = [
     'thriftpy2',
     'requests>=2.19.1',
-    'xylose>=1.33.1'
+    'xylose>=1.35.8'
 ]
 
 tests_require = []
 
 setuptools.setup(
     name="articlemetaapi",
-    version="1.26.6",
+    version="1.26.7",
     description="SciELO ArticleMeta SDK for Python",
     author="SciELO",
     author_email="scielo-dev@googlegroups.com",
