@@ -6,7 +6,6 @@ import time
 import socket
 
 from datetime import datetime
-from datetime import timedelta
 
 from collections import namedtuple
 
@@ -45,6 +44,12 @@ class ServerError(ArticleMetaExceptions):
 
 
 def dates_pagination(from_date, until_date):
+    """
+    Essa função tem como responsabilidade criar páginas por ano, portanto ao
+    realizar uma consulta indicando ou não um período este será dividido,
+    entre os anos e o deslocamento.
+    """
+
     from_date = datetime.strptime(from_date, '%Y-%m-%d')
     until_date = datetime.strptime(until_date, '%Y-%m-%d')
 
@@ -52,6 +57,10 @@ def dates_pagination(from_date, until_date):
 
         dtbg = '%d-01-01' % year
         dtnd = '%d-12-31' % year
+
+        if from_date.year == until_date.year:
+            yield (from_date.isoformat()[:10], until_date.isoformat()[:10])
+            continue
 
         if year == from_date.year:
             yield (from_date.isoformat()[:10], dtnd)
@@ -66,7 +75,7 @@ def dates_pagination(from_date, until_date):
 
 class RestfulClient(object):
 
-    ARTICLEMETA_URL = 'http://articlemeta.scielo.org'
+    ARTICLEMETA_URL = 'http://127.0.0.1:8000'
     JOURNAL_ENDPOINT = '/api/v1/journal'
     ARTICLE_ENDPOINT = '/api/v1/article'
     ARTICLES_ENDPOINT = '/api/v1/articles'
@@ -321,7 +330,7 @@ class RestfulClient(object):
                 params['offset'] += 100
 
     def issues_by_identifiers(self, collection=None, issn=None, from_date=None,
-               until_date=None, only_identifiers=False):
+                              until_date=None, only_identifiers=False):
 
         params = {
             'limit': LIMIT
@@ -363,8 +372,7 @@ class RestfulClient(object):
 
                 params['offset'] += LIMIT
 
-    def issues_history(self, collection=None, issn=None, from_date=None,
-               until_date=None, only_identifiers=False):
+    def issues_history(self, collection=None, issn=None, from_date=None, until_date=None, only_identifiers=False):
 
         params = {
             'limit': LIMIT
@@ -449,10 +457,12 @@ class RestfulClient(object):
 
         fdate = from_date or DEFAULT_FROM_DATE
         udate = until_date or datetime.today().isoformat()[:10]
+
         for from_date, until_date in dates_pagination(fdate, udate):
             params['from'] = from_date
             params['until'] = until_date
             params['offset'] = 0
+
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ARTICLES_ENDPOINT)
                 articles = self._do_request(url, params=params, timeout=10)
@@ -651,7 +661,7 @@ class ThriftClient(object):
                     response = getattr(cl, func)(*args[1:], **kwargs)
                 return response
 
-            except (TTransportException, self.ARTICLEMETA_THRIFT.ServerError, 
+            except (TTransportException, self.ARTICLEMETA_THRIFT.ServerError,
                     socket.timeout) as e:
                 msg = 'Error requesting articlemeta: %s args: %s kwargs: %s message: %s' % (
                     str(func), str(args[1:]), str(kwargs), str(e)
@@ -1074,7 +1084,6 @@ class ThriftClient(object):
 
         fdate = from_date or DEFAULT_FROM_DATE
         udate = until_date or datetime.today().isoformat()[:10]
-
         for from_date, until_date in dates_pagination(fdate, udate):
             offset = 0
             while True:
@@ -1213,6 +1222,5 @@ class ThriftClient(object):
         return json.loads(result)
 
     def get_issue_code_from_label(self, label, journal_code, collection):
-        return self.dispatcher('get_issue_code_from_label',
-                label, journal_code, collection)
-
+        return self.dispatcher('get_issue_code_from_label', label,
+                               journal_code, collection)
