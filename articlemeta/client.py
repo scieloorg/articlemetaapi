@@ -75,7 +75,7 @@ def dates_pagination(from_date, until_date):
 
 class RestfulClient(object):
 
-    ARTICLEMETA_URL = 'http://127.0.0.1:8000'
+    ARTICLEMETA_URL = 'http://articlemeta.scielo.org'
     JOURNAL_ENDPOINT = '/api/v1/journal'
     ARTICLE_ENDPOINT = '/api/v1/article'
     ARTICLES_ENDPOINT = '/api/v1/articles'
