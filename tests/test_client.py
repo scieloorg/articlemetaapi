@@ -17,3 +17,13 @@ class ClientTest(unittest.TestCase):
         ]
 
         self.assertEqual(sorted(expected), sorted(result))
+
+    def test_dates_pagination_same_year(self):
+
+        result = [i for i in client.dates_pagination('2020-05-15', '2020-05-16')]
+
+        expected = [
+            ('2020-05-15', '2020-05-16'),
+        ]
+
+        self.assertEqual(sorted(expected), sorted(result))
