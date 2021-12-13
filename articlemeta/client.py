@@ -83,13 +83,16 @@ class RestfulClient(object):
     ISSUES_ENDPOINT = '/api/v1/issues'
     COLLECTION_ENDPOINT = '/api/v1/collection'
     ATTEMPTS = 10
+    
+    _timeout = 3
 
-    def __init__(self, domain=None):
+    def __init__(self, domain=None, timeout=3):
 
         if domain:
             self.ARTICLEMETA_URL = domain
+        self._timeout = timeout
 
-    def _do_request(self, url, params=None, timeout=3, method='GET'):
+    def _do_request(self, url, params=None, method='GET'):
 
         request = requests.get
         params = params if params else {}
@@ -105,7 +108,7 @@ class RestfulClient(object):
             # So, to not receive a "too many connections error (249 HTTP ERROR)", do not change this line.
             time.sleep(0.4)
             try:
-                result = request(url, params=params, timeout=timeout)
+                result = request(url, params=params, timeout=self._timeout)
                 if result.status_code == 401:
                     logger.error('Unautorized Access for (%s)', url)
                     logger.exception(UnauthorizedAccess())
@@ -465,7 +468,7 @@ class RestfulClient(object):
 
             while True:
                 url = urljoin(self.ARTICLEMETA_URL, self.ARTICLES_ENDPOINT)
-                articles = self._do_request(url, params=params, timeout=10)
+                articles = self._do_request(url, params=params)
 
                 if articles is None:
                     break
