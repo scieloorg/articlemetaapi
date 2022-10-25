@@ -1,0 +1,3 @@
+thriftpy2
+requests>=2.19.1
+xylose>=1.33.1

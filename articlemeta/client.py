@@ -4,9 +4,7 @@ import json
 import logging
 import time
 import socket
-
 from datetime import datetime
-
 from collections import namedtuple
 
 import requests
@@ -14,6 +12,8 @@ import thriftpy2
 from thriftpy2.rpc import make_client, client_context
 from thriftpy2.transport import TTransportException
 from xylose.scielodocument import Article, Journal, Issue
+
+from articlemeta.exception import *
 
 
 # URLJOIN Python 3 and 2 import compatibilities
@@ -25,22 +25,9 @@ except:
 
 LIMIT = 1000
 DEFAULT_FROM_DATE = '1996-01-01'
-
-logger = logging.getLogger(__name__)
-
 EVENTS_STRUCT = namedtuple('event', 'code collection event date')
 
-
-class ArticleMetaExceptions(Exception):
-    pass
-
-
-class UnauthorizedAccess(ArticleMetaExceptions):
-    pass
-
-
-class ServerError(ArticleMetaExceptions):
-    pass
+logger = logging.getLogger(__name__)
 
 
 def dates_pagination(from_date, until_date):
